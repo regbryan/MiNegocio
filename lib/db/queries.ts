@@ -27,6 +27,20 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   return data as Tenant;
 }
 
+export async function getTenantById(id: string): Promise<Tenant | null> {
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null; // not found
+    throw error;
+  }
+  return data as Tenant;
+}
+
 // ---------------------------------------------------------------------------
 // Services
 // ---------------------------------------------------------------------------
