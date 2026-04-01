@@ -1318,6 +1318,7 @@ export const PromptInputHoverCard = ({
   closeDelay = 0,
   ...props
 }: PromptInputHoverCardProps) => (
+  // @ts-expect-error — AI Elements delay props not typed on base HoverCard
   <HoverCard closeDelay={closeDelay} openDelay={openDelay} {...props} />
 );
 

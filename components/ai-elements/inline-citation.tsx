@@ -50,6 +50,7 @@ export const InlineCitationText = ({
 export type InlineCitationCardProps = ComponentProps<typeof HoverCard>;
 
 export const InlineCitationCard = (props: InlineCitationCardProps) => (
+  // @ts-expect-error — AI Elements delay props not typed on base HoverCard
   <HoverCard closeDelay={0} openDelay={0} {...props} />
 );
 

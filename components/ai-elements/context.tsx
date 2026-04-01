@@ -56,6 +56,7 @@ export const Context = ({
 
   return (
     <ContextContext.Provider value={contextValue}>
+      {/* @ts-expect-error — AI Elements delay props not typed on base HoverCard */}
       <HoverCard closeDelay={0} openDelay={0} {...props} />
     </ContextContext.Provider>
   );

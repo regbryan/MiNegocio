@@ -12,9 +12,9 @@ export default function Home() {
           Asistente de reservas con inteligencia artificial para tu negocio.
           Atiende a tus clientes 24/7 de forma automática.
         </p>
-        <Button asChild size="lg">
-          <Link href="/chat/salon-maria">Probar Demo — Salon Maria</Link>
-        </Button>
+        <Link href="/chat/salon-maria">
+          <Button size="lg">Probar Demo — Salon Maria</Button>
+        </Link>
       </main>
     </div>
   );

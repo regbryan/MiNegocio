@@ -34,7 +34,9 @@ export function ChatInterface({
     setSessionId(id);
   }, [tenantSlug]);
 
-  const { messages, sendMessage, status, input, setInput } = useChat({
+  const [input, setInput] = useState("");
+
+  const { messages, sendMessage, status } = useChat({
     transport: sessionId
       ? new DefaultChatTransport({
           api: `/api/chat/${tenantSlug}`,

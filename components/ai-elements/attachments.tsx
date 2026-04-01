@@ -369,13 +369,17 @@ export const AttachmentRemove = ({
 // AttachmentHoverCard - Hover preview
 // ============================================================================
 
-export type AttachmentHoverCardProps = ComponentProps<typeof HoverCard>;
+export type AttachmentHoverCardProps = ComponentProps<typeof HoverCard> & {
+  openDelay?: number;
+  closeDelay?: number;
+};
 
 export const AttachmentHoverCard = ({
   openDelay = 0,
   closeDelay = 0,
   ...props
 }: AttachmentHoverCardProps) => (
+  // @ts-expect-error — AI Elements library passes delay props not typed on base HoverCard
   <HoverCard closeDelay={closeDelay} openDelay={openDelay} {...props} />
 );
 
