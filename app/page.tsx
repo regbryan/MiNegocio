@@ -13,12 +13,17 @@ export default function Home() {
           Atiende a tus clientes 24/7 de forma automática.
         </p>
         <div className="flex flex-col gap-3">
-          <Link href="/chat/salon-maria">
-            <Button size="lg" className="w-full">Probar Demo — Salon Maria</Button>
-          </Link>
           <Link href="/onboard">
-            <Button size="lg" variant="outline" className="w-full">
+            <Button size="lg" className="w-full">
               Registrar Mi Negocio
+            </Button>
+          </Link>
+          <Link href="/chat/salon-maria">
+            <Button size="lg" variant="outline" className="w-full">Probar Demo — Salon Maria</Button>
+          </Link>
+          <Link href="/widget">
+            <Button size="lg" variant="ghost" className="w-full text-muted-foreground">
+              Ver Widget Demo
             </Button>
           </Link>
         </div>
