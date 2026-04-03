@@ -80,6 +80,7 @@ export const VoiceSelector = ({
 
   const [open, setOpen] = useControllableState({
     defaultProp: defaultOpen,
+    // @ts-expect-error — AI Elements onChange signature mismatch
     onChange: onOpenChange,
     prop: openProp,
   });

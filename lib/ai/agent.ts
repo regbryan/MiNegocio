@@ -1,4 +1,5 @@
 import { ToolLoopAgent, stepCountIs } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { buildSystemPrompt } from "./prompt-builder";
 import { createLookupCustomerTool } from "./tools/lookup-customer";
 import { createCreateCustomerTool } from "./tools/create-customer";
@@ -11,7 +12,7 @@ export async function createChatAgent(tenantId: string, sessionId: string) {
   const systemPrompt = await buildSystemPrompt(tenantId);
 
   return new ToolLoopAgent({
-    model: "anthropic/claude-haiku-3.5",
+    model: anthropic("claude-sonnet-4-20250514"),
     instructions: systemPrompt,
     tools: {
       lookup_customer: createLookupCustomerTool(tenantId, sessionId),

@@ -429,6 +429,7 @@ export const PromptInputActionAddAttachments = ({
   );
 
   return (
+    // @ts-expect-error — AI Elements onSelect event type mismatch
     <DropdownMenuItem {...props} onSelect={handleSelect}>
       <ImageIcon className="mr-2 size-4" /> {label}
     </DropdownMenuItem>
@@ -449,7 +450,8 @@ export const PromptInputActionAddScreenshot = ({
   const attachments = usePromptInputAttachments();
 
   const handleSelect = useCallback(
-    async (event: Event) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (event: any) => {
       onSelect?.(event);
       if (event.defaultPrevented) {
         return;
@@ -1232,7 +1234,8 @@ export const PromptInputSubmit = ({
   }
 
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (e: any) => {
       if (isGenerating && onStop) {
         e.preventDefault();
         onStop();
@@ -1313,13 +1316,9 @@ export const PromptInputSelectValue = ({
 
 export type PromptInputHoverCardProps = ComponentProps<typeof HoverCard>;
 
-export const PromptInputHoverCard = ({
-  openDelay = 0,
-  closeDelay = 0,
-  ...props
-}: PromptInputHoverCardProps) => (
+export const PromptInputHoverCard = (props: PromptInputHoverCardProps) => (
   // @ts-expect-error — AI Elements delay props not typed on base HoverCard
-  <HoverCard closeDelay={closeDelay} openDelay={openDelay} {...props} />
+  <HoverCard closeDelay={0} openDelay={0} {...props} />
 );
 
 export type PromptInputHoverCardTriggerProps = ComponentProps<

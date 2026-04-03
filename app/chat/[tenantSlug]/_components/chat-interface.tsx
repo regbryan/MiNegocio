@@ -12,41 +12,31 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function ChatInterface({
+function ChatPanel({
   tenantSlug,
   businessName,
+  sessionId,
 }: {
   tenantSlug: string;
   businessName: string;
+  sessionId: string;
 }) {
-  const [sessionId, setSessionId] = useState<string>("");
-
-  useEffect(() => {
-    let id = localStorage.getItem(`minegocio-session-${tenantSlug}`);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(`minegocio-session-${tenantSlug}`, id);
-    }
-    setSessionId(id);
-  }, [tenantSlug]);
-
   const [input, setInput] = useState("");
 
-  const { messages, sendMessage, status } = useChat({
-    transport: sessionId
-      ? new DefaultChatTransport({
-          api: `/api/chat/${tenantSlug}`,
-          headers: { "X-Session-Id": sessionId },
-        })
-      : undefined,
-  });
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: `/api/chat/${tenantSlug}`,
+        headers: { "X-Session-Id": sessionId },
+      }),
+    [tenantSlug, sessionId]
+  );
 
-  // Don't render chat until sessionId is loaded
-  if (!sessionId) return null;
+  const { messages, sendMessage, status } = useChat({ transport });
 
   const isDisabled = status === "streaming" || status === "submitted";
 
@@ -99,5 +89,34 @@ export function ChatInterface({
         </form>
       </div>
     </div>
+  );
+}
+
+export function ChatInterface({
+  tenantSlug,
+  businessName,
+}: {
+  tenantSlug: string;
+  businessName: string;
+}) {
+  const [sessionId, setSessionId] = useState<string>("");
+
+  useEffect(() => {
+    let id = localStorage.getItem(`minegocio-session-${tenantSlug}`);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(`minegocio-session-${tenantSlug}`, id);
+    }
+    setSessionId(id);
+  }, [tenantSlug]);
+
+  if (!sessionId) return null;
+
+  return (
+    <ChatPanel
+      tenantSlug={tenantSlug}
+      businessName={businessName}
+      sessionId={sessionId}
+    />
   );
 }

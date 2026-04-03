@@ -7,26 +7,41 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tenantSlug: string }> }
 ) {
-  const { tenantSlug } = await params;
-  const sessionId = req.headers.get("X-Session-Id");
+  try {
+    const { tenantSlug } = await params;
+    const sessionId = req.headers.get("X-Session-Id");
 
-  if (!sessionId) {
-    return new Response("Missing X-Session-Id header", { status: 400 });
+    console.log("[chat-api] POST /api/chat/" + tenantSlug, { sessionId });
+
+    if (!sessionId) {
+      return new Response("Missing X-Session-Id header", { status: 400 });
+    }
+
+    const tenant = await getTenantBySlug(tenantSlug);
+    console.log("[chat-api] tenant:", tenant?.id ?? "NOT FOUND");
+
+    if (!tenant) {
+      return new Response("Business not found", { status: 404 });
+    }
+
+    const { messages } = await req.json();
+    console.log("[chat-api] messages count:", messages?.length);
+
+    const agent = await createChatAgent(tenant.id, sessionId);
+    console.log("[chat-api] agent created, streaming response...");
+
+    return createAgentUIStreamResponse({
+      agent,
+      uiMessages: messages,
+      onFinish: async ({ messages: finalMessages }) => {
+        await upsertConversation(tenant.id, sessionId, finalMessages);
+      },
+    });
+  } catch (error) {
+    console.error("[chat-api] ERROR:", error);
+    return new Response(
+      JSON.stringify({ error: String(error) }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
-
-  const tenant = await getTenantBySlug(tenantSlug);
-  if (!tenant) {
-    return new Response("Business not found", { status: 404 });
-  }
-
-  const { messages } = await req.json();
-  const agent = await createChatAgent(tenant.id, sessionId);
-
-  return createAgentUIStreamResponse({
-    agent,
-    uiMessages: messages,
-    onFinish: async ({ messages: finalMessages }) => {
-      await upsertConversation(tenant.id, sessionId, finalMessages);
-    },
-  });
 }
