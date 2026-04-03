@@ -57,9 +57,7 @@ function OnboardPanel({ sessionId }: { sessionId: string }) {
       {/* Header */}
       <header className="border-b border-white/10 px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-            <span className="text-black font-bold text-sm">M</span>
-          </div>
+          <img src="/logo.png" alt="MiNegocio" className="w-8 h-8" />
           <div>
             <h1 className="text-base font-semibold text-white tracking-tight">MiNegocio</h1>
             <p className="text-xs text-white/50">Registro de Negocio</p>

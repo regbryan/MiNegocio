@@ -98,9 +98,7 @@ function WidgetPanel({
       {/* Header */}
       <header className="px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
-            <span className="text-black font-bold text-xs">M</span>
-          </div>
+          <img src="/logo.png" alt="MiNegocio" className="w-7 h-7" />
           <div>
             <h2 className="text-sm font-semibold text-white">MiNegocio</h2>
             <p className="text-[10px] text-white/40 leading-tight">Registro de Negocio</p>
