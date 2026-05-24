@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 export function HowItWorksSection() {
   return (
     <section
-      id="prueba-en-vivo"
+      id="como-funciona"
       aria-labelledby="how-title"
       className="relative bg-[#ead8b6] text-[#2a1f15]"
     >

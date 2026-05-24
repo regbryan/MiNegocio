@@ -22,10 +22,18 @@ import { cn } from "@/lib/utils";
  *   sage          #7a9474   secondary accent (used VERY sparingly)
  */
 
-const WHATSAPP_SANDBOX_NUMBER = "+1 415 523 8886";
-const WHATSAPP_DEEP_LINK =
-  "https://wa.me/14155238886?text=" +
-  encodeURIComponent("hola, quiero hacer una cita");
+// Email used for "request WhatsApp demo access" — until Kapso moves out of
+// sandbox the number can't accept cold inbound, so visitors who want to
+// experience it from WhatsApp send a quick email and we whitelist their phone.
+const REQUEST_WHATSAPP_EMAIL = "reggie@inspiredideationstrategies.com";
+const REQUEST_WHATSAPP_MAILTO =
+  `mailto:${REQUEST_WHATSAPP_EMAIL}` +
+  "?subject=" +
+  encodeURIComponent("Quiero probar el demo de MiNegocio por WhatsApp") +
+  "&body=" +
+  encodeURIComponent(
+    "Hola Reggie,\n\nQuiero probar el demo. Mi número de WhatsApp es +___ — agrégalo a tu sandbox y te escribo.\n\nGracias.",
+  );
 
 export function LandingHero(_props: { bookingsCount: number }) {
   return (
@@ -97,14 +105,13 @@ export function LandingHero(_props: { bookingsCount: number }) {
             >
               Un asistente que contesta WhatsApp, agenda citas y manda la
               confirmación por correo. Despierto a las once de la noche y a
-              las seis de la mañana, en el WhatsApp que ya usas.
+              las seis de la mañana, listo para atender al primer cliente que
+              te escriba.
             </p>
 
             <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <a
-                href={WHATSAPP_DEEP_LINK}
-                target="_blank"
-                rel="noreferrer"
+                href="#prueba-en-vivo"
                 className={cn(
                   "group inline-flex items-center gap-2.5 rounded-full",
                   "bg-[#c66c4a] px-7 py-3.5 text-[15px] font-medium text-[#fff8ed]",
@@ -113,22 +120,22 @@ export function LandingHero(_props: { bookingsCount: number }) {
                   "shadow-[0_8px_22px_-8px_rgba(168,85,47,0.55)]",
                 )}
               >
-                <WhatsAppGlyph />
-                Agendar por WhatsApp
+                Pruébalo aquí mismo
+                <span aria-hidden="true">↓</span>
               </a>
               <a
-                href="#prueba-en-vivo"
+                href={REQUEST_WHATSAPP_MAILTO}
                 className={cn(
                   "font-spectral text-[15px] italic text-[#6b594a]",
                   "underline decoration-[#c66c4a]/30 decoration-2 underline-offset-[6px]",
                   "transition-colors duration-150 hover:text-[#2a1f15] hover:decoration-[#a8552f]",
                 )}
               >
-                o pruébalo aquí mismo ↓
+                o pídeme un demo por WhatsApp →
               </a>
             </div>
 
-            <SpecSheet number={WHATSAPP_SANDBOX_NUMBER} />
+            <SpecSheet />
           </div>
 
           {/* ── Right: phone frame with live chat inside ─────────────── */}
@@ -147,7 +154,10 @@ export function LandingHero(_props: { bookingsCount: number }) {
 
 function PhoneFrame() {
   return (
-    <div className="relative mx-auto w-full max-w-[420px] lg:max-w-[460px] xl:max-w-[500px]">
+    <div
+      id="prueba-en-vivo"
+      className="relative mx-auto w-full max-w-[420px] lg:max-w-[460px] xl:max-w-[500px] scroll-mt-12"
+    >
       {/* Decorative sage leaf above the phone, suggesting a windowsill /
           neighborhood-shop feel without going folk-art-poster. */}
       <svg
@@ -201,7 +211,7 @@ function PhoneFrame() {
 /*  Spec sheet — operational facts in print-spec style                        */
 /* -------------------------------------------------------------------------- */
 
-function SpecSheet({ number }: { number: string }) {
+function SpecSheet() {
   return (
     <p
       className={cn(
@@ -209,25 +219,14 @@ function SpecSheet({ number }: { number: string }) {
         "font-mono text-[11px] tracking-[0.04em] text-[#6b594a]",
       )}
     >
-      <span className="text-[#a8552f]/80">Número de prueba</span>{" "}
-      <span className="text-[#2a1f15]">{number}</span>
+      <span className="text-[#a8552f]/80">Demo</span>{" "}
+      <span className="text-[#2a1f15]">en vivo a la derecha</span>
       <span className="mx-3 text-[#c4ad84]">|</span>
       <span className="text-[#a8552f]/80">Idioma</span>{" "}
       <span className="text-[#2a1f15]">Español neutro</span>
+      <span className="mx-3 text-[#c4ad84]">|</span>
+      <span className="text-[#a8552f]/80">Negocio piloto</span>{" "}
+      <span className="text-[#2a1f15]">Salon Maria · CDMX</span>
     </p>
-  );
-}
-
-function WhatsAppGlyph() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01a1.09 1.09 0 0 0-.79.371c-.272.297-1.04 1.016-1.04 2.479s1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.96 9.96 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
-    </svg>
   );
 }
