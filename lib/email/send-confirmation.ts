@@ -2,6 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 import { logger } from "@/lib/logger";
+import { buildIcs, icsFilename } from "@/lib/calendar/build-ics";
 
 const apiKey = process.env.RESEND_API_KEY;
 const resend = apiKey ? new Resend(apiKey) : null;
@@ -15,13 +16,20 @@ const FROM_ADDRESS = process.env.RESEND_FROM ?? "MiNegocio <onboarding@resend.de
 const OPERATOR_CC = process.env.RESEND_OPERATOR_CC ?? "reggieebryant@gmail.com";
 
 export type BookingConfirmationInput = {
+  /** Stable booking identifier — used as the ICS UID. */
+  bookingId: string;
   customerEmail: string | null | undefined;
+  customerName?: string | null;
   businessName: string;
+  businessPhone?: string | null;
   serviceName: string;
   /** ISO date (YYYY-MM-DD). */
   date: string;
   /** HH:MM, 24h, business-local time. */
   time: string;
+  /** ISO timestamp with offset — preferred over date/time for the calendar invite. */
+  startIso?: string | null;
+  endIso?: string | null;
   staffName?: string | null;
   addressLine?: string | null;
   source?: "web" | "whatsapp";
@@ -53,6 +61,10 @@ export async function sendBookingConfirmation(
   const html = renderBookingEmail(input);
   const text = renderBookingEmailText(input);
 
+  // ICS attachment — universal calendar invite. Best-effort: if start/end
+  // ISO timestamps weren't supplied, skip the attachment but still send the email.
+  const attachments = buildAttachments(input);
+
   try {
     const result = await resend.emails.send({
       from: FROM_ADDRESS,
@@ -61,6 +73,7 @@ export async function sendBookingConfirmation(
       html,
       text,
       headers: { "X-Source": input.source ?? "web" },
+      attachments,
     });
     if (result.error) {
       logger.error("email.booking.send_failed", {
@@ -81,6 +94,43 @@ export async function sendBookingConfirmation(
       message: (err as Error)?.message,
     });
     return null;
+  }
+}
+
+function buildAttachments(
+  input: BookingConfirmationInput,
+):
+  | { filename: string; content: string; contentType?: string }[]
+  | undefined {
+  if (!input.startIso || !input.endIso) return undefined;
+  try {
+    const ics = buildIcs({
+      uid: input.bookingId,
+      businessName: input.businessName,
+      serviceName: input.serviceName,
+      startIso: input.startIso,
+      endIso: input.endIso,
+      location: input.addressLine ?? null,
+      staffName: input.staffName ?? null,
+      customerName: input.customerName ?? null,
+      customerEmail: input.customerEmail ?? null,
+      operatorEmail: OPERATOR_CC || null,
+      contactPhone: input.businessPhone ?? null,
+      appUrl: "https://minegocio-plum.vercel.app",
+    });
+    return [
+      {
+        filename: icsFilename(input.bookingId),
+        content: Buffer.from(ics, "utf-8").toString("base64"),
+        contentType: "text/calendar; method=REQUEST; charset=utf-8",
+      },
+    ];
+  } catch (err) {
+    logger.warn("email.booking.ics_build_failed", {
+      booking_id: input.bookingId,
+      message: (err as Error)?.message,
+    });
+    return undefined;
   }
 }
 
@@ -152,7 +202,8 @@ function renderBookingEmail(input: BookingConfirmationInput): string {
           </tr>
           <tr>
             <td style="padding:8px 32px 32px">
-              <p style="margin:16px 0 0;color:#a3a3a3;font-size:14px">¿Necesitas cambiar la cita? Respóndele al asistente de ${escapeHtml(businessName)} por el mismo canal donde la agendaste.</p>
+              <p style="margin:16px 0 0;color:#a3a3a3;font-size:14px">Adjunto encontrarás un archivo <strong style="color:#ffffff">.ics</strong>. Ábrelo para guardar esta cita en tu calendario (Google, Apple o Outlook).</p>
+              <p style="margin:12px 0 0;color:#a3a3a3;font-size:14px">¿Necesitas cambiar la cita? Respóndele al asistente de ${escapeHtml(businessName)} por el mismo canal donde la agendaste.</p>
               <p style="margin:24px 0 0;color:#525252;font-size:12px;border-top:1px solid #262626;padding-top:16px">Este correo lo manda <strong style="color:#737373;font-weight:500">MiNegocio</strong>, la plataforma que ${escapeHtml(businessName)} usa para atender por WhatsApp y agendar citas.</p>
             </td>
           </tr>

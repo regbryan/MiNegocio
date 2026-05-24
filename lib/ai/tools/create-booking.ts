@@ -8,6 +8,7 @@ import {
   getTenantById,
 } from "@/lib/db/queries";
 import { sendBookingConfirmation } from "@/lib/email/send-confirmation";
+import { createCalendarEvent } from "@/lib/calendar/google";
 import { logger } from "@/lib/logger";
 
 export function createCreateBookingTool(
@@ -59,8 +60,7 @@ export function createCreateBookingTool(
       const date = startDateTime.toISOString().slice(0, 10);
       const time = startDateTime.toISOString().slice(11, 16);
 
-      // Fire email confirmation (best-effort, never blocks the booking).
-      // We don't await it; a slow Resend call must not slow agent replies.
+      // Fire email + calendar in parallel, best-effort, never block agent reply.
       void (async () => {
         try {
           const [customer, tenant] = await Promise.all([
@@ -76,18 +76,48 @@ export function createCreateBookingTool(
                 .filter(Boolean)
                 .join(", ")
             : null;
-          await sendBookingConfirmation({
-            customerEmail: customer?.email ?? null,
-            businessName: tenant?.business_name ?? "tu negocio",
-            serviceName: service.name,
-            date,
-            time,
-            staffName,
-            addressLine: addressLine || null,
-            source: options?.source ?? "web",
-          });
+
+          // Calendar invite + actual Google Calendar event share these timestamps.
+          const calendarDescription = [
+            `Servicio: ${service.name}`,
+            ...(staffName ? [`Con: ${staffName}`] : []),
+            ...(customer?.full_name ? [`Cliente: ${customer.full_name}`] : []),
+            ...(customer?.phone ? [`Teléfono cliente: ${customer.phone}`] : []),
+            "",
+            `Agendado vía ${options?.source === "whatsapp" ? "WhatsApp" : "web"} con el asistente de ${tenant?.business_name ?? "MiNegocio"}.`,
+          ].join("\n");
+
+          await Promise.all([
+            sendBookingConfirmation({
+              bookingId,
+              customerEmail: customer?.email ?? null,
+              customerName: customer?.full_name ?? null,
+              businessName: tenant?.business_name ?? "tu negocio",
+              businessPhone: tenant?.phone ?? null,
+              serviceName: service.name,
+              date,
+              time,
+              startIso: start_time,
+              endIso: end_time,
+              staffName,
+              addressLine: addressLine || null,
+              source: options?.source ?? "web",
+            }),
+            createCalendarEvent({
+              bookingId,
+              summary: staffName
+                ? `${service.name} con ${staffName} · ${tenant?.business_name ?? ""}`.trim()
+                : `${service.name} · ${tenant?.business_name ?? ""}`.trim(),
+              description: calendarDescription,
+              location: addressLine || null,
+              startIso: start_time,
+              endIso: end_time,
+              attendeeEmail: customer?.email ?? null,
+              attendeeName: customer?.full_name ?? null,
+            }),
+          ]);
         } catch (err) {
-          logger.error("create_booking.email_dispatch_failed", {
+          logger.error("create_booking.dispatch_failed", {
             booking_id: bookingId,
             message: (err as Error)?.message,
           });
