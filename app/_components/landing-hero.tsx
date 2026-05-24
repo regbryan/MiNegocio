@@ -44,8 +44,8 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
         )}
       />
 
-      <div className="mx-auto max-w-[1800px] px-6 pt-16 pb-20 md:px-10 md:pt-24 md:pb-28">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-16">
+      <div className="mx-auto max-w-[1800px] px-6 pt-8 pb-16 md:px-10 md:pt-12 md:pb-24">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-14">
           {/* ── Left column ─────────────────────────────────────────── */}
           <div className="flex flex-col">
             <PresenceBadge bookingsCount={bookingsCount} />
@@ -119,15 +119,31 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
           </div>
 
           {/* ── Right column: embedded live chat ────────────────────── */}
-          <div
-            id="embedded-chat"
-            className={cn(
-              "relative w-full overflow-hidden rounded-2xl",
-              "border border-white/10 bg-[#0f0f0f]",
-              // Soft shadow only on the outer edge per DESIGN.md panel-floating
-              "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]",
-            )}
-          >
+          <div className="flex flex-col">
+            <div className="mb-3 flex items-baseline justify-between gap-4 px-1">
+              <p className="text-[13px] leading-snug text-white/55 md:text-[14px]">
+                <span className="font-medium text-white">
+                  Escríbele a María.
+                </span>{" "}
+                Te contesta como una persona, en segundos.
+              </p>
+              <span
+                aria-hidden="true"
+                className="hidden font-mono text-[10px] uppercase tracking-[0.14em] text-white/30 sm:inline"
+              >
+                ↓ aquí abajo
+              </span>
+            </div>
+            <div
+              id="embedded-chat"
+              className={cn(
+                "relative w-full overflow-hidden rounded-2xl",
+                "border border-white/10 bg-[#0f0f0f]",
+                // Soft shadow only on the outer edge per DESIGN.md panel-floating.
+                // Plus a faint teal lift so the chat reads as the page's active surface.
+                "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6),0_0_0_1px_rgba(72,168,144,0.08),0_0_40px_-12px_rgba(72,168,144,0.18)]",
+              )}
+            >
             {/* Browser-chrome-y header: window dots + URL-style label */}
             <div className="flex items-center gap-3 border-b border-white/8 px-4 py-2.5">
               <div className="flex gap-1.5" aria-hidden="true">
@@ -140,12 +156,13 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
               </span>
             </div>
 
-            <ChatInterface
-              key={chatKey}
-              tenantSlug="salon-maria"
-              businessName="Salon Maria"
-              containerClassName="h-[560px] md:h-[600px]"
-            />
+              <ChatInterface
+                key={chatKey}
+                tenantSlug="salon-maria"
+                businessName="Salon Maria"
+                containerClassName="h-[560px] md:h-[600px]"
+              />
+            </div>
           </div>
         </div>
       </div>
