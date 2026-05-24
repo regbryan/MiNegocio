@@ -1,34 +1,48 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+import { LandingHero } from "./_components/landing-hero";
+import { HowItWorksSection } from "./_components/how-it-works";
+import { LiveTranscriptSection } from "./_components/live-transcript";
+import { LandingFooterCredit } from "./_components/landing-footer-credit";
+import {
+  getConfirmedBookingsCount,
+  getRecentAnonymizedBookings,
+} from "@/lib/db/landing-queries";
 
-export default function Home() {
+// Revalidate the page every 60 seconds so the bookings count + live transcript
+// stay fresh without pounding Supabase on every request.
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "Tu asistente en WhatsApp · MiNegocio",
+  description:
+    "Atiende a tus clientes, agenda citas y manda confirmaciones por correo — todo en piloto automático, dentro de WhatsApp.",
+  openGraph: {
+    title: "Tu asistente en WhatsApp · MiNegocio",
+    description:
+      "Atiende a tus clientes, agenda citas y manda confirmaciones por correo — todo en piloto automático.",
+  },
+};
+
+export default async function HomePage() {
+  // Best-effort data fetch — both helpers swallow errors and return safe
+  // fallbacks so the landing page never fails to render.
+  const [bookingsCount, recentBookings] = await Promise.all([
+    getConfirmedBookingsCount(),
+    getRecentAnonymizedBookings(4),
+  ]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-background font-sans">
-      <main id="main" className="flex flex-col items-center gap-6 text-center px-6">
-        <img src="/mascot.png" alt="" className="w-64 h-64 object-contain" />
-        <h1 className="text-3xl font-semibold tracking-tight">
-          MiNegocio Digital
-        </h1>
-        <p className="max-w-md text-lg leading-7 text-muted-foreground">
-          Asistente de reservas con inteligencia artificial para tu negocio.
-          Atiende a tus clientes 24/7 de forma automática.
-        </p>
-        <div className="flex flex-col gap-3">
-          <Link href="/onboard">
-            <Button size="lg" className="w-full">
-              Registrar Mi Negocio
-            </Button>
-          </Link>
-          <Link href="/chat/salon-maria">
-            <Button size="lg" variant="outline" className="w-full">Probar Demo — Salon Maria</Button>
-          </Link>
-          <Link href="/widget">
-            <Button size="lg" variant="ghost" className="w-full text-muted-foreground">
-              Ver Widget Demo
-            </Button>
-          </Link>
-        </div>
-      </main>
-    </div>
+    <main id="main" className="flex-1 bg-[#0a0a0a] text-white">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:text-black"
+      >
+        Saltar al contenido
+      </a>
+      <LandingHero bookingsCount={bookingsCount} />
+      <HowItWorksSection />
+      <LiveTranscriptSection bookings={recentBookings} />
+      <LandingFooterCredit />
+    </main>
   );
 }

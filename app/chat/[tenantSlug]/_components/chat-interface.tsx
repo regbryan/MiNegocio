@@ -11,9 +11,16 @@ import { cn } from "@/lib/utils";
 export function ChatInterface({
   tenantSlug,
   businessName,
+  containerClassName,
 }: {
   tenantSlug: string;
   businessName: string;
+  /**
+   * Tailwind classes for the chat container. Defaults to `h-dvh` (full
+   * viewport, the standalone /chat/[slug] use case). Pass a fixed height
+   * like `h-[540px]` when embedding inside a larger layout (landing page).
+   */
+  containerClassName?: string;
 }) {
   const runtime = useChatRuntime({
     transport: new AssistantChatTransport({
@@ -24,7 +31,7 @@ export function ChatInterface({
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <MiNegocioThread
-        className="h-dvh"
+        className={cn(containerClassName ?? "h-dvh")}
         header={<TenantHeader businessName={businessName} />}
         emptyState={<TenantEmptyState businessName={businessName} />}
         composerPlaceholder={`Escribe tu mensaje para ${businessName}…`}
