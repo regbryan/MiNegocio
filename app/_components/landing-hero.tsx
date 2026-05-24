@@ -41,11 +41,11 @@ export function LandingHero(_props: { bookingsCount: number }) {
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(80%_60%_at_50%_-10%,rgba(233,210,170,0.5),transparent_60%),radial-gradient(50%_40%_at_100%_100%,rgba(198,108,74,0.06),transparent_70%)]"
       />
 
-      <div className="mx-auto max-w-[1800px] px-6 pt-10 pb-16 md:px-10 md:pt-14 md:pb-20 lg:pt-16 lg:pb-24">
+      <div className="mx-auto max-w-[1800px] px-6 pt-6 pb-10 md:px-10 md:pt-8 md:pb-12 lg:pt-10 lg:pb-14">
         <div
           className={cn(
-            "grid grid-cols-1 gap-12",
-            "lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:gap-20",
+            "grid grid-cols-1 gap-8",
+            "lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:gap-16",
           )}
         >
           {/* ── Left: editorial column ───────────────────────────────── */}
@@ -57,7 +57,7 @@ export function LandingHero(_props: { bookingsCount: number }) {
               MiNegocio · piloto en CDMX
             </p>
 
-            <div className="mt-6 flex items-end gap-4 md:gap-6">
+            <div className="mt-4 flex items-end gap-4 md:gap-6">
               <img
                 src="/mascot.png"
                 alt=""
@@ -65,10 +65,10 @@ export function LandingHero(_props: { bookingsCount: number }) {
                 draggable={false}
                 className={cn(
                   "shrink-0 select-none drop-shadow-[0_8px_24px_rgba(42,31,21,0.18)]",
-                  "h-44 w-auto",
-                  "md:h-56",
-                  "lg:h-60",
-                  "xl:h-72",
+                  "h-32 w-auto",
+                  "md:h-40",
+                  "lg:h-44",
+                  "xl:h-52",
                 )}
               />
               <h1
@@ -76,10 +76,10 @@ export function LandingHero(_props: { bookingsCount: number }) {
                 className={cn(
                   "font-spectral",
                   "max-w-[14ch]",
-                  "text-[44px] leading-[1.02] font-medium tracking-[-0.015em] text-[#2a1f15]",
-                  "md:text-[60px]",
-                  "lg:text-[64px]",
-                  "xl:text-[72px]",
+                  "text-[36px] leading-[1.02] font-medium tracking-[-0.015em] text-[#2a1f15]",
+                  "md:text-[48px]",
+                  "lg:text-[52px]",
+                  "xl:text-[58px]",
                 )}
               >
                 Tu negocio responde{" "}
@@ -90,9 +90,9 @@ export function LandingHero(_props: { bookingsCount: number }) {
             <p
               className={cn(
                 "font-spectral",
-                "mt-10 max-w-[44ch]",
-                "text-[17px] leading-[1.55] text-[#6b594a]",
-                "md:text-[19px]",
+                "mt-6 max-w-[44ch]",
+                "text-[15px] leading-[1.5] text-[#6b594a]",
+                "md:text-[16px]",
               )}
             >
               Un asistente que contesta WhatsApp, agenda citas y manda la
@@ -100,7 +100,7 @@ export function LandingHero(_props: { bookingsCount: number }) {
               las seis de la mañana, en el WhatsApp que ya usas.
             </p>
 
-            <div className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+            <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <a
                 href={WHATSAPP_DEEP_LINK}
                 target="_blank"
@@ -182,7 +182,7 @@ function PhoneFrame() {
           <ChatInterface
             tenantSlug="salon-maria"
             businessName="Salon Maria"
-            containerClassName="h-[560px] md:h-[600px] lg:h-[620px]"
+            containerClassName="h-[440px] md:h-[460px] lg:h-[480px]"
           />
         </div>
 
@@ -193,17 +193,6 @@ function PhoneFrame() {
         />
       </div>
 
-      {/* Caption under the phone — quiet editorial label, not a launch pill */}
-      <p
-        className={cn(
-          "mt-6 text-center font-spectral italic text-[#6b594a]",
-          "text-[15px]",
-        )}
-      >
-        Esto es{" "}
-        <span className="text-[#2a1f15]">una conversación real</span>. Escribe
-        tu primer mensaje a la izquierda del teclado del teléfono.
-      </p>
     </div>
   );
 }
@@ -214,43 +203,18 @@ function PhoneFrame() {
 
 function SpecSheet({ number }: { number: string }) {
   return (
-    <dl
+    <p
       className={cn(
-        "mt-12 grid grid-cols-1 gap-y-4 border-t border-[#c4ad84] pt-6",
-        "sm:grid-cols-2 sm:gap-x-12",
-        "lg:grid-cols-3 lg:gap-x-10",
+        "mt-8 border-t border-[#c4ad84] pt-4",
+        "font-mono text-[11px] tracking-[0.04em] text-[#6b594a]",
       )}
     >
-      <SpecRow label="Número de prueba" value={number} mono />
-      <SpecRow label="Quien responde" value="El asistente que ves al lado" />
-      <SpecRow label="Idioma" value="Español neutro · tú" />
-    </dl>
-  );
-}
-
-function SpecRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <dt className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a8552f]/80">
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "text-[14px] text-[#2a1f15]",
-          mono ? "font-mono tracking-[0.01em]" : "font-spectral",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
+      <span className="text-[#a8552f]/80">Número de prueba</span>{" "}
+      <span className="text-[#2a1f15]">{number}</span>
+      <span className="mx-3 text-[#c4ad84]">|</span>
+      <span className="text-[#a8552f]/80">Idioma</span>{" "}
+      <span className="text-[#2a1f15]">Español neutro</span>
+    </p>
   );
 }
 
