@@ -245,11 +245,22 @@ export async function linkCustomerToConversation(
   sessionId: string,
   customerId: string
 ): Promise<void> {
+  // UPSERT, not UPDATE. The conversation row may not exist yet on the very
+  // first turn (the webhook upserts messages AFTER the agent runs). A plain
+  // UPDATE would silently affect 0 rows and the customer would never be
+  // linked, causing lookup_customer to keep returning null and the agent
+  // to redo create_customer on every subsequent turn.
   const { error } = await supabase
     .from("conversations")
-    .update({ customer_id: customerId })
-    .eq("tenant_id", tenantId)
-    .eq("session_id", sessionId);
+    .upsert(
+      {
+        tenant_id: tenantId,
+        session_id: sessionId,
+        customer_id: customerId,
+        last_message_at: new Date().toISOString(),
+      },
+      { onConflict: "tenant_id,session_id", ignoreDuplicates: false },
+    );
 
   if (error) throw error;
 }

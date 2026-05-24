@@ -87,8 +87,27 @@ export async function POST(req: NextRequest) {
       source: "whatsapp",
     });
 
+    // Instrumentation: log every tool call + its latency so we can spot
+    // redundant work in the agent loop (the main cause of slow turns).
+    const agentT0 = Date.now();
+    let stepIndex = 0;
     const result = await agent.generate({
       messages: [...history, { role: "user", content: body }],
+      onStepFinish: ({ toolCalls }) => {
+        stepIndex += 1;
+        const elapsedMs = Date.now() - agentT0;
+        const calls = (toolCalls ?? []).map((c) => c.toolName);
+        logger.info("whatsapp.step", {
+          step: stepIndex,
+          elapsed_ms: elapsedMs,
+          tool_calls: calls,
+        });
+      },
+    });
+    const agentTotalMs = Date.now() - agentT0;
+    logger.info("whatsapp.agent_done", {
+      total_ms: agentTotalMs,
+      steps: stepIndex,
     });
 
     const replyText = result.text?.trim() || fallbackReply();

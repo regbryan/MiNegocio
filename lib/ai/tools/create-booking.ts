@@ -1,4 +1,5 @@
 import { tool } from "ai";
+import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
 import { supabase } from "@/lib/db/client";
 import {
@@ -61,7 +62,12 @@ export function createCreateBookingTool(
       const time = startDateTime.toISOString().slice(11, 16);
 
       // Fire email + calendar in parallel, best-effort, never block agent reply.
-      void (async () => {
+      // waitUntil tells Vercel to keep the lambda warm just long enough to
+      // finish these I/O calls AFTER the response has already been sent.
+      // Without this, the runtime may freeze the function as soon as
+      // create_booking returns to the agent loop, killing the email/calendar
+      // promises mid-flight.
+      waitUntil((async () => {
         try {
           const [customer, tenant] = await Promise.all([
             getCustomerById(customer_id),
@@ -122,7 +128,7 @@ export function createCreateBookingTool(
             message: (err as Error)?.message,
           });
         }
-      })();
+      })());
 
       return {
         id: bookingId,
