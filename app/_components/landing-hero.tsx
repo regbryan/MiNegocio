@@ -9,7 +9,9 @@ const WHATSAPP_DEEP_LINK =
   "https://wa.me/14155238886?text=" +
   encodeURIComponent("hola, quiero hacer una cita");
 
-export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
+export function LandingHero(_props: { bookingsCount: number }) {
+  // bookingsCount intentionally unused now that the PresenceBadge is gone.
+  // Kept on the prop so the server component caller doesn't change.
   // The embedded chat is rendered in a column to the right of the headline on
   // desktop and below it on mobile. We use a key to force-remount the chat if
   // the user clicks "Probar aquí" — that drops them into a fresh session.
@@ -48,9 +50,7 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-14">
           {/* ── Left column ─────────────────────────────────────────── */}
           <div className="flex flex-col">
-            <PresenceBadge bookingsCount={bookingsCount} />
-
-            <div className="mt-8 flex items-start gap-5 md:gap-6">
+            <div className="flex items-start gap-5 md:gap-6">
               <img
                 src="/mascot.png"
                 alt=""
@@ -170,31 +170,10 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
   );
 }
 
-function PresenceBadge({ bookingsCount }: { bookingsCount: number }) {
-  // No "presence dot" here — the chat widget's own header carries the one
-  // legitimate live-state indicator (per DESIGN.md). Stacking three of them
-  // across the hero reads as generic AI-SaaS chatbot decoration.
-  const label =
-    bookingsCount > 0
-      ? `${bookingsCount.toLocaleString("es-MX")} ${
-          bookingsCount === 1 ? "cita agendada" : "citas agendadas"
-        } vía WhatsApp`
-      : "En piloto";
-  return (
-    <div
-      className={cn(
-        "inline-flex w-fit items-center gap-2 rounded-full",
-        "border border-white/10 bg-white/[0.02] px-3 py-1.5",
-        "font-mono text-[11px] tracking-[0.04em] uppercase text-white/55",
-      )}
-    >
-      <span aria-hidden="true" className="text-white/30">
-        ◇
-      </span>
-      {label}
-    </div>
-  );
-}
+// PresenceBadge removed — the uppercase-mono pill with a glyph read as a
+// generic AI-SaaS launch badge. The page doesn't need a counter to assert
+// legitimacy; the live chat does that. If we want bookings data back later,
+// it goes in the meta spec sheet under the CTAs, not as a hero badge.
 
 function DemoMetaLine() {
   return (
