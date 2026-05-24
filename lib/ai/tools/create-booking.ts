@@ -1,9 +1,19 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { supabase } from "@/lib/db/client";
-import { getServiceById, getStaffById } from "@/lib/db/queries";
+import {
+  getCustomerById,
+  getServiceById,
+  getStaffById,
+  getTenantById,
+} from "@/lib/db/queries";
+import { sendBookingConfirmation } from "@/lib/email/send-confirmation";
+import { logger } from "@/lib/logger";
 
-export function createCreateBookingTool(tenantId: string) {
+export function createCreateBookingTool(
+  tenantId: string,
+  options?: { source?: "web" | "whatsapp" },
+) {
   return tool({
     description: "Create an appointment booking for a customer.",
     inputSchema: z.object({
@@ -48,6 +58,41 @@ export function createCreateBookingTool(tenantId: string) {
       const startDateTime = new Date(start_time);
       const date = startDateTime.toISOString().slice(0, 10);
       const time = startDateTime.toISOString().slice(11, 16);
+
+      // Fire email confirmation (best-effort, never blocks the booking).
+      // We don't await it; a slow Resend call must not slow agent replies.
+      void (async () => {
+        try {
+          const [customer, tenant] = await Promise.all([
+            getCustomerById(customer_id),
+            getTenantById(tenantId),
+          ]);
+          const addressLine = tenant
+            ? [
+                tenant.address_street,
+                tenant.address_colonia,
+                tenant.address_city,
+              ]
+                .filter(Boolean)
+                .join(", ")
+            : null;
+          await sendBookingConfirmation({
+            customerEmail: customer?.email ?? null,
+            businessName: tenant?.business_name ?? "tu negocio",
+            serviceName: service.name,
+            date,
+            time,
+            staffName,
+            addressLine: addressLine || null,
+            source: options?.source ?? "web",
+          });
+        } catch (err) {
+          logger.error("create_booking.email_dispatch_failed", {
+            booking_id: bookingId,
+            message: (err as Error)?.message,
+          });
+        }
+      })();
 
       return {
         id: bookingId,

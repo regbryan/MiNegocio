@@ -8,7 +8,13 @@ import { createCheckAvailabilityTool } from "./tools/check-availability";
 import { createCreateBookingTool } from "./tools/create-booking";
 import { createEscalateToHumanTool } from "./tools/escalate-to-human";
 
-export async function createChatAgent(tenantId: string, sessionId: string) {
+export type ChatAgentSource = "web" | "whatsapp";
+
+export async function createChatAgent(
+  tenantId: string,
+  sessionId: string,
+  options?: { source?: ChatAgentSource },
+) {
   const systemPrompt = await buildSystemPrompt(tenantId);
 
   return new ToolLoopAgent({
@@ -19,7 +25,9 @@ export async function createChatAgent(tenantId: string, sessionId: string) {
       create_customer: createCreateCustomerTool(tenantId, sessionId),
       list_services: createListServicesTool(tenantId),
       check_availability: createCheckAvailabilityTool(tenantId),
-      create_booking: createCreateBookingTool(tenantId),
+      create_booking: createCreateBookingTool(tenantId, {
+        source: options?.source ?? "web",
+      }),
       escalate_to_human: createEscalateToHumanTool(tenantId, sessionId),
     },
     stopWhen: stepCountIs(8),
