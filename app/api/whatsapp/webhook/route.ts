@@ -2,6 +2,12 @@ import { NextRequest } from "next/server";
 import crypto from "node:crypto";
 
 import { createChatAgent } from "@/lib/ai/agent";
+
+// Vercel function timeout. Default is 10s on Hobby (too tight for tool-loop
+// agents). Twilio's own webhook timeout is 15s, so we set this just under
+// that. Pro/Enterprise plans cap at 60s. See:
+// https://vercel.com/docs/functions/runtimes#max-duration
+export const maxDuration = 30;
 import {
   getConversation,
   getTenantBySlug,
