@@ -128,19 +128,15 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
               "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]",
             )}
           >
-            {/* Browser-chrome-y header: window dots + "wa.me / salon maria" */}
-            <div className="flex items-center gap-2 border-b border-white/8 px-4 py-2.5">
+            {/* Browser-chrome-y header: window dots + URL-style label */}
+            <div className="flex items-center gap-3 border-b border-white/8 px-4 py-2.5">
               <div className="flex gap-1.5" aria-hidden="true">
-                <span className="h-2.5 w-2.5 rounded-full bg-white/12" />
-                <span className="h-2.5 w-2.5 rounded-full bg-white/12" />
-                <span className="h-2.5 w-2.5 rounded-full bg-white/12" />
+                <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+                <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+                <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
               </div>
-              <span className="ml-2 truncate font-mono text-[11px] tracking-[0.02em] text-white/40">
-                salon maria · sandbox
-              </span>
-              <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[#48a890]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#48a890]" />
-                en vivo
+              <span className="truncate font-mono text-[11px] tracking-[0.02em] text-white/40">
+                minegocio.app/chat/salon-maria
               </span>
             </div>
 
@@ -158,24 +154,25 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
 }
 
 function PresenceBadge({ bookingsCount }: { bookingsCount: number }) {
+  // No "presence dot" here — the chat widget's own header carries the one
+  // legitimate live-state indicator (per DESIGN.md). Stacking three of them
+  // across the hero reads as generic AI-SaaS chatbot decoration.
   const label =
     bookingsCount > 0
-      ? `${bookingsCount.toLocaleString("es-MX")} citas agendadas vía WhatsApp`
-      : "Demo en piloto";
+      ? `${bookingsCount.toLocaleString("es-MX")} ${
+          bookingsCount === 1 ? "cita agendada" : "citas agendadas"
+        } vía WhatsApp`
+      : "En piloto";
   return (
     <div
       className={cn(
         "inline-flex w-fit items-center gap-2 rounded-full",
-        "border border-white/10 bg-white/[0.03] px-3 py-1.5",
-        "font-mono text-[11px] tracking-[0.02em] text-white/55",
+        "border border-white/10 bg-white/[0.02] px-3 py-1.5",
+        "font-mono text-[11px] tracking-[0.04em] uppercase text-white/55",
       )}
     >
-      <span
-        className="relative flex h-2 w-2"
-        aria-hidden="true"
-      >
-        <span className="absolute inset-0 animate-ping rounded-full bg-[#48a890] opacity-50" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#48a890]" />
+      <span aria-hidden="true" className="text-white/30">
+        ◇
       </span>
       {label}
     </div>
