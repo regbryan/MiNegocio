@@ -1,24 +1,33 @@
 import { NextRequest } from "next/server";
 import crypto from "node:crypto";
+import { waitUntil } from "@vercel/functions";
 
 import { createChatAgent } from "@/lib/ai/agent";
-
-// Vercel function timeout. Default is 10s on Hobby (too tight for tool-loop
-// agents). Twilio's own webhook timeout is 15s, so we set this just under
-// that. Pro/Enterprise plans cap at 60s. See:
-// https://vercel.com/docs/functions/runtimes#max-duration
-export const maxDuration = 30;
 import {
   getConversation,
   getTenantBySlug,
   upsertConversation,
 } from "@/lib/db/queries";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send-message";
 import { logger } from "@/lib/logger";
 
+// Vercel function timeout. Default is 10s on Hobby (too tight for tool-loop
+// agents). With the async pattern below the function returns TwiML instantly,
+// and the agent work happens in waitUntil — but we still need maxDuration to
+// be generous so the background promise has time to finish.
+export const maxDuration = 60;
+
 // Twilio's WhatsApp sandbox / Business API POSTs form-encoded payloads to
-// this endpoint. We respond with TwiML so Twilio sends the reply over WhatsApp.
+// this endpoint. We acknowledge synchronously with empty TwiML so Twilio
+// considers the webhook delivered (well inside its 15s window). The actual
+// AI reply is generated in the background and sent back to the user via
+// Twilio's outbound Messages API. This decouples agent latency from Twilio's
+// webhook timeout — tool-loop bookings that take 20-30s no longer fail.
+//
 // Required env vars:
-//   TWILIO_AUTH_TOKEN          (for request-signature validation)
+//   TWILIO_ACCOUNT_SID         (outbound + signature validation)
+//   TWILIO_AUTH_TOKEN          (outbound + signature validation)
+//   TWILIO_WHATSAPP_FROM       (outbound "From")
 //   WHATSAPP_DEMO_TENANT_SLUG  (default: "salon-maria")
 //
 // Optional env vars:
@@ -28,8 +37,8 @@ const DEFAULT_TENANT_SLUG =
   process.env.WHATSAPP_DEMO_TENANT_SLUG ?? "salon-maria";
 
 // Max recent messages we feed back into the agent for context. WhatsApp
-// conversations can run long; keeping the last ~20 turns is plenty for booking flows
-// and keeps prompt tokens bounded.
+// conversations can run long; keeping the last ~20 turns is plenty for booking
+// flows and keeps prompt tokens bounded.
 const MAX_HISTORY_MESSAGES = 20;
 
 export async function POST(req: NextRequest) {
@@ -41,7 +50,8 @@ export async function POST(req: NextRequest) {
     return twimlEmpty();
   }
 
-  // ---------- Twilio signature validation ----------
+  // Signature validation rejects synchronously. Anything past here is a
+  // trusted Twilio request.
   if (!isSignatureValid(req, form)) {
     logger.warn("whatsapp.invalid_signature");
     return new Response("Forbidden", { status: 403 });
@@ -53,88 +63,139 @@ export async function POST(req: NextRequest) {
   const messageSid = String(form.get("MessageSid") ?? "");
 
   if (!from || !body) {
+    // Twilio status callbacks and other empty deliveries land here. Nothing
+    // to process; ack and move on.
     logger.info("whatsapp.empty_message", { from, messageSid });
     return twimlEmpty();
   }
 
   const phone = from.replace(/^whatsapp:/, "");
+  const sessionId = `wa:${phone}`;
 
+  logger.info("whatsapp.incoming", {
+    from_hash: hashPhone(phone),
+    message_sid: messageSid,
+    profile_name: profileName || null,
+  });
+
+  // Hand off the heavy lifting to a background promise. Vercel keeps the
+  // function alive long enough for waitUntil's promise to resolve, up to
+  // maxDuration. We return TwiML to Twilio immediately so its 15s clock
+  // does not run against us.
+  waitUntil(
+    processAgentTurn({
+      from,
+      phone,
+      body,
+      sessionId,
+      messageSid,
+    }).catch((err) => {
+      logger.error("whatsapp.background_failed", {
+        from_hash: hashPhone(phone),
+        message_sid: messageSid,
+        message: (err as Error)?.message,
+      });
+    }),
+  );
+
+  return twimlEmpty();
+}
+
+// ---------------------------------------------------------------------------
+// Background processing
+// ---------------------------------------------------------------------------
+
+type ProcessInput = {
+  from: string;
+  phone: string;
+  body: string;
+  sessionId: string;
+  messageSid: string;
+};
+
+async function processAgentTurn(input: ProcessInput): Promise<void> {
+  const { from, phone, body, sessionId, messageSid } = input;
+
+  // Resolve tenant. For now there is a single demo tenant; future versions
+  // will route by inbound number.
+  const tenant = await getTenantBySlug(DEFAULT_TENANT_SLUG);
+  if (!tenant) {
+    logger.error("whatsapp.tenant_not_found", { slug: DEFAULT_TENANT_SLUG });
+    await sendWhatsAppMessage({
+      to: from,
+      body: "Lo sentimos, el demo no está disponible en este momento.",
+    });
+    return;
+  }
+
+  const prior = await getConversation(tenant.id, sessionId);
+  const history = sanitizeHistory(prior?.messages);
+
+  const agent = await createChatAgent(tenant.id, sessionId, {
+    source: "whatsapp",
+  });
+
+  // Per-step instrumentation so we can spot redundant tool calls in logs.
+  const agentT0 = Date.now();
+  let stepIndex = 0;
+  let result;
   try {
-    const tenant = await getTenantBySlug(DEFAULT_TENANT_SLUG);
-    if (!tenant) {
-      logger.error("whatsapp.tenant_not_found", { slug: DEFAULT_TENANT_SLUG });
-      return twiml(
-        "Lo sentimos, el demo no está disponible en este momento. Inténtalo más tarde.",
-      );
-    }
-
-    // Session = phone number. One WhatsApp number → one continuing conversation per tenant.
-    const sessionId = `wa:${phone}`;
-
-    // Pull prior conversation messages, trimmed to the most recent slice.
-    const prior = await getConversation(tenant.id, sessionId);
-    const history = sanitizeHistory(prior?.messages);
-
-    logger.info("whatsapp.incoming", {
-      tenant_id: tenant.id,
-      from_hash: hashPhone(phone),
-      message_sid: messageSid,
-      profile_name: profileName || null,
-      history_count: history.length,
-    });
-
-    const agent = await createChatAgent(tenant.id, sessionId, {
-      source: "whatsapp",
-    });
-
-    // Instrumentation: log every tool call + its latency so we can spot
-    // redundant work in the agent loop (the main cause of slow turns).
-    const agentT0 = Date.now();
-    let stepIndex = 0;
-    const result = await agent.generate({
+    result = await agent.generate({
       messages: [...history, { role: "user", content: body }],
       onStepFinish: ({ toolCalls }) => {
         stepIndex += 1;
-        const elapsedMs = Date.now() - agentT0;
         const calls = (toolCalls ?? []).map((c) => c.toolName);
         logger.info("whatsapp.step", {
           step: stepIndex,
-          elapsed_ms: elapsedMs,
+          elapsed_ms: Date.now() - agentT0,
           tool_calls: calls,
         });
       },
     });
-    const agentTotalMs = Date.now() - agentT0;
-    logger.info("whatsapp.agent_done", {
-      total_ms: agentTotalMs,
-      steps: stepIndex,
-    });
-
-    const replyText = result.text?.trim() || fallbackReply();
-
-    // Persist the updated transcript (history + this user turn + the assistant reply).
-    const updated = [
-      ...history,
-      { role: "user", content: body },
-      { role: "assistant", content: replyText },
-    ].slice(-MAX_HISTORY_MESSAGES * 2); // keep headroom
-
-    try {
-      await upsertConversation(tenant.id, sessionId, updated);
-    } catch (persistErr) {
-      logger.error("whatsapp.persist_failed", {
-        tenant_id: tenant.id,
-        message: (persistErr as Error)?.message,
-      });
-    }
-
-    return twiml(replyText);
   } catch (err) {
-    logger.error("whatsapp.unhandled", {
+    logger.error("whatsapp.agent_threw", {
       from_hash: hashPhone(phone),
+      message_sid: messageSid,
       message: (err as Error)?.message,
     });
-    return twiml(fallbackReply());
+    await sendWhatsAppMessage({ to: from, body: fallbackReply() });
+    return;
+  }
+
+  const totalMs = Date.now() - agentT0;
+  logger.info("whatsapp.agent_done", {
+    total_ms: totalMs,
+    steps: stepIndex,
+  });
+
+  const replyText = result.text?.trim() || fallbackReply();
+
+  // Send the outbound WhatsApp reply BEFORE we worry about persistence.
+  // The visible user experience matters more than transcript bookkeeping.
+  const sendResult = await sendWhatsAppMessage({ to: from, body: replyText });
+  if (!sendResult.ok) {
+    logger.error("whatsapp.outbound_send_failed", {
+      from_hash: hashPhone(phone),
+      message_sid: messageSid,
+      error: sendResult.errorMessage,
+    });
+  }
+
+  // Persist the updated transcript so the next turn has context.
+  const updated = [
+    ...history,
+    { role: "user", content: body },
+    { role: "assistant", content: replyText },
+  ].slice(-MAX_HISTORY_MESSAGES * 2);
+
+  try {
+    await upsertConversation(tenant.id, sessionId, updated);
+  } catch (persistErr) {
+    logger.error("whatsapp.persist_failed", {
+      tenant_id: tenant.id,
+      from_hash: hashPhone(phone),
+      message: (persistErr as Error)?.message,
+    });
   }
 }
 
@@ -142,30 +203,15 @@ export async function POST(req: NextRequest) {
 // TwiML helpers
 // ---------------------------------------------------------------------------
 
-function twiml(messageText: string): Response {
-  const escaped = escapeXml(messageText);
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escaped}</Message></Response>`;
-  return new Response(xml, {
-    status: 200,
-    headers: { "Content-Type": "text/xml; charset=utf-8" },
-  });
-}
-
 function twimlEmpty(): Response {
+  // Empty TwiML response: Twilio receives this as a successful webhook
+  // delivery and does NOT send anything to the user. The actual reply goes
+  // via Twilio's outbound Messages API after the agent finishes.
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`;
   return new Response(xml, {
     status: 200,
     headers: { "Content-Type": "text/xml; charset=utf-8" },
   });
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 function fallbackReply(): string {
@@ -182,18 +228,10 @@ function isSignatureValid(req: NextRequest, form: FormData): boolean {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const signature = req.headers.get("x-twilio-signature");
 
-  if (!authToken) {
-    // Until the env var is set we reject — better than accepting unsigned
-    // traffic to a tool-loop agent.
-    return false;
-  }
+  if (!authToken) return false;
   if (!signature) return false;
 
-  // Twilio's algorithm: concatenate the full URL + the form params sorted
-  // by key (key+value, no separator), HMAC-SHA1 with auth token, base64.
   const url = new URL(req.url);
-  // Twilio uses the publicly-visible URL (protocol + host + path). When deployed
-  // behind a proxy, NextRequest.url already reflects the public URL.
   const baseUrl = `${url.protocol}//${url.host}${url.pathname}${url.search}`;
 
   const params: string[] = [];
@@ -240,11 +278,9 @@ function sanitizeHistory(raw: unknown): HistoryMessage[] {
 }
 
 function hashPhone(phone: string): string {
-  // Don't log raw phone numbers. Hash for correlation only.
   return crypto.createHash("sha256").update(phone).digest("hex").slice(0, 12);
 }
 
-// Twilio expects an explicit GET response too (used during webhook setup probes).
 export async function GET() {
   return new Response(
     "MiNegocio WhatsApp webhook. POST-only in production.",
