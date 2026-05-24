@@ -9,6 +9,32 @@ import { getServices } from "@/lib/db/queries";
 
 const mockGetServices = vi.mocked(getServices);
 
+type ServiceOut = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  currency: string;
+  duration_minutes: number;
+  category: string | null;
+};
+
+async function runList(
+  tool: ReturnType<typeof createListServicesTool>,
+  args: Parameters<NonNullable<typeof tool.execute>>[0],
+): Promise<ServiceOut[]> {
+  const ctx = {
+    messages: [],
+    toolCallId: "call-1",
+    abortSignal: new AbortController().signal,
+  };
+  const result = await tool.execute!(args, ctx);
+  if (!Array.isArray(result)) {
+    throw new Error("list-services tool returned an AsyncIterable, expected an array");
+  }
+  return result as ServiceOut[];
+}
+
 const mockServices = [
   {
     id: "svc-1",
@@ -60,10 +86,7 @@ describe("createListServicesTool", () => {
     mockGetServices.mockResolvedValue(mockServices);
 
     const tool = createListServicesTool("tenant-1");
-    const result = await tool.execute(
-      {},
-      { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
-    );
+    const result = await runList(tool, {});
 
     expect(mockGetServices).toHaveBeenCalledWith("tenant-1", undefined);
     expect(result).toHaveLength(3);
@@ -83,24 +106,18 @@ describe("createListServicesTool", () => {
     mockGetServices.mockResolvedValue(hairServices);
 
     const tool = createListServicesTool("tenant-1");
-    const result = await tool.execute(
-      { category: "cabello" },
-      { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
-    );
+    const result = await runList(tool, { category: "cabello" });
 
     expect(mockGetServices).toHaveBeenCalledWith("tenant-1", "cabello");
     expect(result).toHaveLength(2);
-    expect(result.every((s: { category: string | null }) => s.category === "cabello")).toBe(true);
+    expect(result.every((s) => s.category === "cabello")).toBe(true);
   });
 
   it("returns formatted service info with all required fields", async () => {
     mockGetServices.mockResolvedValue([mockServices[2]]);
 
     const tool = createListServicesTool("tenant-1");
-    const result = await tool.execute(
-      { category: "unas" },
-      { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
-    );
+    const result = await runList(tool, { category: "unas" });
 
     expect(result[0]).toMatchObject({
       id: "svc-3",

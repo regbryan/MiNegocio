@@ -1,194 +1,141 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
 import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
+  AssistantRuntimeProvider,
+  useThreadRuntime,
+} from "@assistant-ui/react";
 import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputTextarea,
-  PromptInputTools,
-  PromptInputActionMenu,
-  PromptInputActionMenuTrigger,
-  PromptInputActionMenuContent,
-  PromptInputActionAddAttachments,
-  PromptInputSubmit,
-} from "@/components/ai-elements/prompt-input";
-import {
-  Suggestions,
-  Suggestion,
-} from "@/components/ai-elements/suggestion";
-import {
-  Attachments,
-  Attachment,
-  AttachmentInfo,
-} from "@/components/ai-elements/attachments";
-import { useEffect, useMemo, useState } from "react";
+  useChatRuntime,
+  AssistantChatTransport,
+} from "@assistant-ui/react-ai-sdk";
+import { MiNegocioThread } from "@/components/assistant-ui/thread";
+import { cn } from "@/lib/utils";
 
-function OnboardPanel({ sessionId }: { sessionId: string }) {
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/onboard",
-        headers: { "X-Session-Id": sessionId },
-      }),
-    [sessionId]
-  );
+// TODO(follow-up): file attachments. The previous hand-rolled onboard chat
+// supported uploading menus / price sheets / SOPs via PromptInput. Re-add via
+// assistant-ui's ComposerPrimitive.AddAttachment + an attachment adapter once
+// the migration is stable.
 
-  const { messages, sendMessage, status } = useChat({ transport });
-
-  const isDisabled = status === "streaming" || status === "submitted";
-  const hasMessages = messages.length > 0;
+export function OnboardChat() {
+  const runtime = useChatRuntime({
+    transport: new AssistantChatTransport({
+      api: "/api/onboard",
+    }),
+  });
 
   return (
-    <div className="flex flex-col h-dvh bg-black">
-      {/* Header */}
-      <header className="border-b border-white/10 px-5 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="MiNegocio" className="h-14" />
-          <span className="text-xs text-white/40">|</span>
-          <p className="text-sm text-white/50">Registro de Negocio</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-white/40 font-mono">
-            {status === "streaming" ? "Escribiendo..." : "En línea"}
-          </span>
-          <span className={`w-2 h-2 rounded-full ${status === "streaming" ? "bg-yellow-400 animate-pulse" : "bg-emerald-400"}`} />
-        </div>
-      </header>
+    <AssistantRuntimeProvider runtime={runtime}>
+      <MiNegocioThread
+        className="h-dvh"
+        header={<OnboardHeader />}
+        emptyState={<OnboardEmptyState />}
+        composerPlaceholder="Escribe tu respuesta…"
+      />
+    </AssistantRuntimeProvider>
+  );
+}
 
-      {/* Chat area */}
-      <Conversation className="flex-1">
-        <ConversationContent>
-          {!hasMessages && (
-            <div className="flex items-center justify-center h-full px-6">
-              <div className="max-w-md text-center space-y-6">
-                <img src="/logo.png" alt="MiNegocio" className="h-24 mx-auto" />
-                <div className="space-y-2">
-                  <p className="text-white/90 font-medium text-lg">Configura tu asistente de IA</p>
-                  <p className="text-white/40 text-sm leading-relaxed">
-                    Te voy a guiar paso a paso para registrar tu negocio en unos minutos.
-                    También puedes subir documentos, fotos, inventarios, y SOPs.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          {messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent>
-                {message.parts
-                  .filter((part) => part.type === "text")
-                  .map((part, i) => (
-                    <MessageResponse key={i}>{part.text}</MessageResponse>
-                  ))}
-                {message.parts.filter((part) => part.type === "file").length > 0 && (
-                  <Attachments variant="inline">
-                    {message.parts
-                      .filter((part) => part.type === "file")
-                      .map((part, i) => (
-                        <Attachment key={`file-${i}`} data={{ ...part, id: `file-${i}` }}>
-                          <AttachmentInfo />
-                        </Attachment>
-                      ))}
-                  </Attachments>
-                )}
-              </MessageContent>
-            </Message>
-          ))}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-
-      {/* Suggestions for empty state */}
-      {!hasMessages && (
-        <div className="px-4 pb-2">
-          <Suggestions>
-            <Suggestion
-              suggestion="Hola, quiero registrar mi negocio"
-              onClick={(s) => sendMessage({ text: s })}
-            />
-            <Suggestion
-              suggestion="Tengo un salón de belleza"
-              onClick={(s) => sendMessage({ text: s })}
-            />
-            <Suggestion
-              suggestion="Tengo un restaurante"
-              onClick={(s) => sendMessage({ text: s })}
-            />
-          </Suggestions>
-        </div>
+function OnboardHeader() {
+  return (
+    <header
+      className={cn(
+        "relative flex shrink-0 items-center justify-between border-b border-white/10",
+        "bg-[radial-gradient(120%_140%_at_0%_0%,rgba(72,168,144,0.06),transparent_60%)]",
+        "px-5 py-3.5",
       )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="relative shrink-0">
+          <div
+            className={cn(
+              "flex h-10 w-10 items-end justify-center overflow-hidden rounded-xl",
+              "bg-white/[0.06] ring-1 ring-inset ring-white/10",
+            )}
+          >
+            <img
+              src="/mascot.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none -mb-0.5 h-[48px] w-auto select-none"
+            />
+          </div>
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#48a890] ring-2 ring-black"
+          >
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#48a890] opacity-60" />
+          </span>
+        </div>
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[15px] font-semibold tracking-[-0.01em] text-white">
+            MiNegocio
+          </div>
+          <div className="truncate text-[11px] tracking-[0.01em] text-white/45">
+            Registro de negocio
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
 
-      {/* Input area */}
-      <div className="border-t border-white/10 p-4 shrink-0">
-        <PromptInput
-          accept="image/*,.pdf,.csv,.txt,.xlsx,.xls,.doc,.docx"
-          multiple
-          onSubmit={(message) => {
-            if (message.files.length > 0) {
-              const fileList = message.files.map(f => {
-                const byteString = atob(f.url.split(",")[1] || "");
-                const mimeString = f.url.split(",")[0]?.split(":")[1]?.split(";")[0] || f.mediaType;
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                  ia[i] = byteString.charCodeAt(i);
-                }
-                const blob = new Blob([ab], { type: mimeString });
-                return new File([blob], f.filename || "document", { type: mimeString });
-              });
-              const dt = new DataTransfer();
-              fileList.forEach(f => dt.items.add(f));
-              sendMessage({
-                text: message.text || "Aquí está mi documento. Por favor revísalo y extrae la información relevante para mi negocio.",
-                files: dt.files,
-              });
-            } else {
-              sendMessage({ text: message.text });
-            }
-          }}
-        >
-          <PromptInputTextarea
-            placeholder="Escribe tu mensaje..."
-            disabled={isDisabled}
+const SUGGESTIONS = [
+  "Hola, quiero registrar mi negocio",
+  "Tengo un salón de belleza",
+  "Tengo un restaurante",
+];
+
+function OnboardEmptyState() {
+  return (
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="max-w-md space-y-6 text-center">
+        <div className="mx-auto h-24 w-24 overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10">
+          <img
+            src="/mascot.png"
+            alt=""
+            aria-hidden="true"
+            className="-mb-1.5 h-[112px] w-auto"
           />
-          <PromptInputTools>
-            <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger tooltip="Adjuntar" />
-              <PromptInputActionMenuContent>
-                <PromptInputActionAddAttachments label="Subir documento" />
-              </PromptInputActionMenuContent>
-            </PromptInputActionMenu>
-            <PromptInputSubmit disabled={isDisabled} />
-          </PromptInputTools>
-        </PromptInput>
+        </div>
+        <div className="space-y-2">
+          <p className="text-lg font-semibold tracking-[-0.01em] text-white">
+            Configura tu asistente de IA
+          </p>
+          <p className="text-sm leading-relaxed text-white/65">
+            Te guiaré paso a paso para registrar tu negocio en unos minutos.
+            Una pregunta a la vez.
+          </p>
+        </div>
+        <SuggestionChips />
       </div>
     </div>
   );
 }
 
-export function OnboardChat() {
-  const [sessionId, setSessionId] = useState<string>("");
-
-  useEffect(() => {
-    let id = localStorage.getItem("minegocio-onboard-session");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("minegocio-onboard-session", id);
-    }
-    setSessionId(id);
-  }, []);
-
-  if (!sessionId) return null;
-
-  return <OnboardPanel sessionId={sessionId} />;
+function SuggestionChips() {
+  const thread = useThreadRuntime();
+  return (
+    <div className="flex flex-wrap justify-center gap-2 pt-2">
+      {SUGGESTIONS.map((s) => (
+        <button
+          key={s}
+          type="button"
+          onClick={() =>
+            thread.append({
+              role: "user",
+              content: [{ type: "text", text: s }],
+            })
+          }
+          className={cn(
+            "rounded-full border border-white/10 bg-white/[0.04]",
+            "px-3 py-1.5 text-[12px] text-white/70",
+            "transition-colors hover:border-[#48a890]/50 hover:bg-[#48a890]/10 hover:text-white",
+          )}
+        >
+          {s}
+        </button>
+      ))}
+    </div>
+  );
 }

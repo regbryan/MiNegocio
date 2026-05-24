@@ -55,7 +55,7 @@ describe("createCreateBookingTool", () => {
     mockRpc.mockResolvedValue({ data: { id: "booking-123" }, error: null } as never);
 
     const tool = createCreateBookingTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       {
         customer_id: "cust-1",
         service_id: "svc-1",
@@ -87,7 +87,7 @@ describe("createCreateBookingTool", () => {
     mockRpc.mockResolvedValue({ data: { id: "booking-456" }, error: null } as never);
 
     const tool = createCreateBookingTool("tenant-1");
-    await tool.execute(
+    await tool.execute!(
       {
         customer_id: "cust-1",
         service_id: "svc-1",
@@ -111,7 +111,7 @@ describe("createCreateBookingTool", () => {
     mockRpc.mockResolvedValue({ data: { id: "booking-789" }, error: null } as never);
 
     const tool = createCreateBookingTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       {
         customer_id: "cust-1",
         service_id: "svc-1",
@@ -136,7 +136,7 @@ describe("createCreateBookingTool", () => {
     } as never);
 
     const tool = createCreateBookingTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       {
         customer_id: "cust-1",
         service_id: "svc-1",
@@ -156,7 +156,7 @@ describe("createCreateBookingTool", () => {
     } as never);
 
     const tool = createCreateBookingTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       {
         customer_id: "cust-1",
         service_id: "svc-1",
@@ -175,7 +175,7 @@ describe("createCreateBookingTool", () => {
     mockRpc.mockResolvedValue({ data: { id: "booking-999" }, error: null } as never);
 
     const tool = createCreateBookingTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       {
         customer_id: "cust-1",
         service_id: "svc-1",

@@ -1,96 +1,12 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-function ChatPanel({
-  tenantSlug,
-  businessName,
-  sessionId,
-}: {
-  tenantSlug: string;
-  businessName: string;
-  sessionId: string;
-}) {
-  const [input, setInput] = useState("");
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: `/api/chat/${tenantSlug}`,
-        headers: { "X-Session-Id": sessionId },
-      }),
-    [tenantSlug, sessionId]
-  );
-
-  const { messages, sendMessage, status } = useChat({ transport });
-
-  const isDisabled = status === "streaming" || status === "submitted";
-
-  return (
-    <div className="flex flex-col h-dvh bg-background">
-      {/* Header */}
-      <header className="border-b px-4 py-3 flex items-center">
-        <h1 className="text-lg font-semibold">{businessName}</h1>
-      </header>
-
-      {/* Messages */}
-      <Conversation className="flex-1">
-        <ConversationContent>
-          {messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent>
-                {message.parts
-                  .filter((part) => part.type === "text")
-                  .map((part, i) => (
-                    <MessageResponse key={i}>{part.text}</MessageResponse>
-                  ))}
-              </MessageContent>
-            </Message>
-          ))}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-
-      {/* Input */}
-      <div className="border-t p-4">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (input.trim()) {
-              sendMessage({ text: input });
-              setInput("");
-            }
-          }}
-          className="flex gap-2"
-        >
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje..."
-            disabled={isDisabled}
-          />
-          <Button type="submit" disabled={!input.trim() || isDisabled}>
-            Enviar
-          </Button>
-        </form>
-      </div>
-    </div>
-  );
-}
+  useChatRuntime,
+  AssistantChatTransport,
+} from "@assistant-ui/react-ai-sdk";
+import { MiNegocioThread } from "@/components/assistant-ui/thread";
+import { cn } from "@/lib/utils";
 
 export function ChatInterface({
   tenantSlug,
@@ -99,24 +15,91 @@ export function ChatInterface({
   tenantSlug: string;
   businessName: string;
 }) {
-  const [sessionId, setSessionId] = useState<string>("");
-
-  useEffect(() => {
-    let id = localStorage.getItem(`minegocio-session-${tenantSlug}`);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(`minegocio-session-${tenantSlug}`, id);
-    }
-    setSessionId(id);
-  }, [tenantSlug]);
-
-  if (!sessionId) return null;
+  const runtime = useChatRuntime({
+    transport: new AssistantChatTransport({
+      api: `/api/chat/${tenantSlug}`,
+    }),
+  });
 
   return (
-    <ChatPanel
-      tenantSlug={tenantSlug}
-      businessName={businessName}
-      sessionId={sessionId}
-    />
+    <AssistantRuntimeProvider runtime={runtime}>
+      <MiNegocioThread
+        className="h-dvh"
+        header={<TenantHeader businessName={businessName} />}
+        emptyState={<TenantEmptyState businessName={businessName} />}
+        composerPlaceholder={`Escribe tu mensaje para ${businessName}…`}
+      />
+    </AssistantRuntimeProvider>
+  );
+}
+
+function TenantHeader({ businessName }: { businessName: string }) {
+  return (
+    <header
+      className={cn(
+        "relative flex shrink-0 items-center justify-between border-b border-white/10",
+        "bg-[radial-gradient(120%_140%_at_0%_0%,rgba(72,168,144,0.06),transparent_60%)]",
+        "px-5 py-3.5",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="relative shrink-0">
+          <div
+            className={cn(
+              "flex h-10 w-10 items-end justify-center overflow-hidden rounded-xl",
+              "bg-white/[0.06] ring-1 ring-inset ring-white/10",
+            )}
+          >
+            <img
+              src="/mascot.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none -mb-0.5 h-[48px] w-auto select-none"
+            />
+          </div>
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#48a890] ring-2 ring-black"
+          >
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#48a890] opacity-60" />
+          </span>
+        </div>
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[15px] font-semibold tracking-[-0.01em] text-white">
+            {businessName}
+          </div>
+          <div className="truncate text-[11px] tracking-[0.01em] text-white/45">
+            Asistente · En línea
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function TenantEmptyState({ businessName }: { businessName: string }) {
+  return (
+    <div className="flex h-full items-center justify-center px-6">
+      <div className="max-w-sm space-y-4 text-center">
+        <div className="mx-auto h-20 w-20 overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10">
+          <img
+            src="/mascot.png"
+            alt=""
+            aria-hidden="true"
+            className="-mb-1 h-[96px] w-auto"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-base font-medium text-white/90">
+            Hola, soy el asistente de {businessName}.
+          </p>
+          <p className="text-sm leading-relaxed text-white/45">
+            Puedo ayudarte a reservar una cita, ver horarios disponibles o
+            responder tus preguntas. ¿Cómo te llamas?
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

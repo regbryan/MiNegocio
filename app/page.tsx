@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-background font-sans">
-      <main className="flex flex-col items-center gap-6 text-center px-6">
-        <img src="/logo.png" alt="MiNegocio Digital" className="w-64 h-64" />
+      <main id="main" className="flex flex-col items-center gap-6 text-center px-6">
+        <img src="/mascot.png" alt="" className="w-64 h-64 object-contain" />
+        <h1 className="text-3xl font-semibold tracking-tight">
+          MiNegocio Digital
+        </h1>
         <p className="max-w-md text-lg leading-7 text-muted-foreground">
           Asistente de reservas con inteligencia artificial para tu negocio.
           Atiende a tus clientes 24/7 de forma automática.

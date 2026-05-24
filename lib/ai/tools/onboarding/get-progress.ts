@@ -1,16 +1,17 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { getOnboardingProgress } from "@/lib/db/onboarding-queries";
+import { getOnboardingProgress, getSessionTenantId } from "@/lib/db/onboarding-queries";
 
-export function createGetProgressTool() {
+export function createGetProgressTool(sessionId: string) {
   return tool({
-    description:
-      "Check the current onboarding progress — what data has been collected so far.",
-    inputSchema: z.object({
-      tenant_id: z.string(),
-    }),
-    execute: async ({ tenant_id }) => {
-      return await getOnboardingProgress(tenant_id);
+    description: "Check the current onboarding progress for the session's business.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const tenantId = await getSessionTenantId(sessionId);
+      if (!tenantId) {
+        return { error: "No tenant bound to this session. Call create_tenant first." };
+      }
+      return await getOnboardingProgress(tenantId);
     },
   });
 }

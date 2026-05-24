@@ -25,7 +25,7 @@ describe("createCheckAvailabilityTool", () => {
     mockGetAvailableSlots.mockResolvedValue(slots);
 
     const tool = createCheckAvailabilityTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { date: "2024-06-10" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );
@@ -50,7 +50,7 @@ describe("createCheckAvailabilityTool", () => {
     mockGetAvailableSlots.mockResolvedValue([]);
 
     const tool = createCheckAvailabilityTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { date: "2024-06-10" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );
@@ -67,7 +67,7 @@ describe("createCheckAvailabilityTool", () => {
     mockGetAvailableSlots.mockResolvedValue(slots);
 
     const tool = createCheckAvailabilityTool("tenant-1");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { date: "2024-06-10", service_id: "svc-1", staff_id: "staff-2" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );

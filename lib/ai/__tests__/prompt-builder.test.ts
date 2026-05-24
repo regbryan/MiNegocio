@@ -236,13 +236,14 @@ describe("buildSystemPrompt", () => {
     it("includes the Spanish name prompt phrase", async () => {
       const prompt = await buildSystemPrompt(TENANT_ID);
 
-      expect(prompt).toContain("Para brindarte un mejor servicio");
+      expect(prompt).toContain("¿Me podrías compartir tu nombre?");
     });
 
     it("includes the optional email ask", async () => {
       const prompt = await buildSystemPrompt(TENANT_ID);
 
-      expect(prompt).toContain("Si gustas, puedes compartirme tu correo");
+      expect(prompt).toContain("correo para enviarte la confirmación");
+      expect(prompt).toContain("completamente opcional");
     });
   });
 
@@ -250,7 +251,8 @@ describe("buildSystemPrompt", () => {
     it("includes language setting", async () => {
       const prompt = await buildSystemPrompt(TENANT_ID);
 
-      expect(prompt).toContain("Language: es");
+      // Tenant-controlled strings are wrapped in <<< … >>> per Phase 4.5.
+      expect(prompt).toContain("Language: <<<es>>>");
     });
 
     it("includes tone", async () => {

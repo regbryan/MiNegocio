@@ -1,199 +1,139 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { useState } from "react";
 import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
+  AssistantRuntimeProvider,
+} from "@assistant-ui/react";
 import {
-  Message,
-  MessageContent,
-  MessageResponse,
-} from "@/components/ai-elements/message";
-import { useEffect, useMemo, useRef, useState } from "react";
+  useChatRuntime,
+  AssistantChatTransport,
+} from "@assistant-ui/react-ai-sdk";
+import { MessageSquareIcon, XIcon } from "lucide-react";
+import { MiNegocioThread } from "@/components/assistant-ui/thread";
+import { cn } from "@/lib/utils";
 
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
-  const [sessionId, setSessionId] = useState<string>("");
-
-  useEffect(() => {
-    let id = localStorage.getItem("minegocio-widget-session");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("minegocio-widget-session", id);
-    }
-    setSessionId(id);
-  }, []);
-
-  if (!sessionId) return null;
 
   return (
     <>
-      {/* Chat bubble button */}
       {!open && (
         <button
+          type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-white text-black shadow-lg shadow-black/30 flex items-center justify-center hover:scale-105 transition-transform z-50"
+          aria-label="Abrir chat"
+          className={cn(
+            "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center",
+            "rounded-full bg-[#48a890] text-white",
+            "shadow-lg shadow-black/30 transition-transform hover:scale-105",
+          )}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <MessageSquareIcon aria-hidden="true" className="h-6 w-6" />
         </button>
       )}
 
-      {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[80dvh] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/10 z-50 flex flex-col bg-black">
-          <WidgetPanel sessionId={sessionId} onClose={() => setOpen(false)} />
+        <div
+          data-testid="widget-panel"
+          className={cn(
+            "fixed bottom-6 right-6 z-50 flex flex-col",
+            "h-[600px] max-h-[80dvh] w-[380px]",
+            "overflow-hidden rounded-2xl border border-white/10 bg-black",
+            "shadow-2xl shadow-black/50",
+          )}
+        >
+          <WidgetPanel onClose={() => setOpen(false)} />
         </div>
       )}
     </>
   );
 }
 
-function WidgetPanel({
-  sessionId,
-  onClose,
-}: {
-  sessionId: string;
-  onClose: () => void;
-}) {
-  const [input, setInput] = useState("");
-  const [files, setFiles] = useState<FileList | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/onboard",
-        headers: { "X-Session-Id": sessionId },
-      }),
-    [sessionId]
-  );
-
-  const { messages, sendMessage, status } = useChat({ transport });
-
-  const isDisabled = status === "streaming" || status === "submitted";
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() && !files?.length) return;
-
-    if (files?.length) {
-      sendMessage({
-        text: input || "Aquí está mi documento. Por favor revísalo y extrae la información relevante para mi negocio.",
-        files,
-      });
-    } else {
-      sendMessage({ text: input });
-    }
-
-    setInput("");
-    setFiles(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+function WidgetPanel({ onClose }: { onClose: () => void }) {
+  const runtime = useChatRuntime({
+    transport: new AssistantChatTransport({
+      api: "/api/onboard",
+    }),
+  });
 
   return (
-    <>
-      {/* Header */}
-      <header className="px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="MiNegocio" className="h-8" />
-        </div>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 rounded-md flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      </header>
+    <AssistantRuntimeProvider runtime={runtime}>
+      <MiNegocioThread
+        header={<WidgetHeader onClose={onClose} />}
+        emptyState={<WidgetEmptyState />}
+        composerPlaceholder='Escribe "Hola" para comenzar…'
+      />
+    </AssistantRuntimeProvider>
+  );
+}
 
-      {/* Messages */}
-      <Conversation className="flex-1 min-h-0">
-        <ConversationContent>
-          {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full px-5">
-              <div className="text-center space-y-3">
-                <p className="text-white/80 text-sm font-medium">Configura tu asistente de IA</p>
-                <p className="text-white/35 text-xs leading-relaxed">
-                  Escribe &quot;Hola&quot; para comenzar.
-                </p>
-              </div>
-            </div>
-          )}
-          {messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent>
-                {message.parts
-                  .filter((part) => part.type === "text")
-                  .map((part, i) => (
-                    <MessageResponse key={i}>{part.text}</MessageResponse>
-                  ))}
-                {message.parts
-                  .filter((part) => part.type === "file")
-                  .map((part, i) => (
-                    <span key={`file-${i}`} className="inline-flex items-center gap-1.5 text-xs text-white/60 bg-white/5 border border-white/10 rounded-md px-2 py-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-                      {"filename" in part && part.filename ? part.filename : "Documento"}
-                    </span>
-                  ))}
-              </MessageContent>
-            </Message>
-          ))}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-
-      {/* Input */}
-      <div className="border-t border-white/10 p-3 shrink-0">
-        {files && files.length > 0 && (
-          <div className="flex items-center gap-2 mb-2 text-xs text-white/50 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5">
-            <span className="truncate">{Array.from(files).map(f => f.name).join(", ")}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setFiles(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-              className="ml-auto text-white/30 hover:text-white"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
+function WidgetHeader({ onClose }: { onClose: () => void }) {
+  return (
+    <header
+      className={cn(
+        "relative flex shrink-0 items-center justify-between border-b border-white/10",
+        "bg-[radial-gradient(120%_140%_at_0%_0%,rgba(72,168,144,0.08),transparent_55%)]",
+        "px-3.5 py-3",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="relative shrink-0">
+          <div
+            className={cn(
+              "flex h-9 w-9 items-end justify-center overflow-hidden rounded-xl",
+              "bg-white/[0.06] ring-1 ring-inset ring-white/10",
+            )}
+          >
+            <img
+              src="/mascot.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none -mb-0.5 h-[42px] w-auto select-none"
+            />
           </div>
-        )}
-        <form onSubmit={handleSubmit} className="flex gap-1.5">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.pdf,.csv,.txt,.xlsx,.xls,.doc,.docx"
-            className="hidden"
-            onChange={(e) => setFiles(e.target.files)}
-            multiple
-          />
-          <button
-            type="button"
-            disabled={isDisabled}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center justify-center w-9 h-9 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#48a890] ring-2 ring-black"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          </button>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje..."
-            disabled={isDisabled}
-            className="flex-1 h-9 rounded-md bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/25 focus:outline-none focus:ring-1 focus:ring-white/20 disabled:opacity-30"
-          />
-          <button
-            type="submit"
-            disabled={(!input.trim() && !files?.length) || isDisabled}
-            className="flex items-center justify-center w-9 h-9 rounded-md bg-white text-black hover:bg-white/90 transition-all disabled:opacity-30"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-          </button>
-        </form>
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#48a890] opacity-60" />
+          </span>
+        </div>
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-[13.5px] font-semibold tracking-[-0.01em] text-white">
+            MiNegocio
+          </div>
+          <div className="truncate text-[11px] tracking-[0.01em] text-white/45">
+            Asistente · En línea
+          </div>
+        </div>
       </div>
-    </>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Cerrar chat"
+        className={cn(
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+          "text-white/40 transition-all hover:bg-white/10 hover:text-white",
+        )}
+      >
+        <XIcon aria-hidden="true" className="h-4 w-4" />
+      </button>
+    </header>
+  );
+}
+
+function WidgetEmptyState() {
+  return (
+    <div className="flex h-full items-center justify-center px-5">
+      <div className="space-y-3 text-center">
+        <p className="text-sm font-medium text-white/80">
+          Configura tu asistente de IA
+        </p>
+        <p className="text-xs leading-relaxed text-white/35">
+          Escribe &quot;Hola&quot; para comenzar.
+        </p>
+      </div>
+    </div>
   );
 }

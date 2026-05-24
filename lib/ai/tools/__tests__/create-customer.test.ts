@@ -41,7 +41,7 @@ describe("createCreateCustomerTool", () => {
     mockCreateCustomer.mockResolvedValue(newCustomer);
 
     const tool = createCreateCustomerTool("tenant-1", "session-abc");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { full_name: "Carlos Pérez" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );
@@ -70,7 +70,7 @@ describe("createCreateCustomerTool", () => {
     mockCreateCustomer.mockResolvedValue(newCustomer);
 
     const tool = createCreateCustomerTool("tenant-1", "session-abc");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { full_name: "Laura Martínez", email: "laura@example.com" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );
@@ -91,7 +91,7 @@ describe("createCreateCustomerTool", () => {
     mockCreateCustomer.mockResolvedValue(newCustomer);
 
     const tool = createCreateCustomerTool("tenant-1", "session-abc");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { full_name: "José Ramírez" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { supabase } from "@/lib/db/client";
 import type {
   Tenant,
@@ -207,14 +209,27 @@ export async function getCustomerBySession(
 
 export async function createCustomer(
   tenantId: string,
-  data: { full_name: string; email?: string }
+  data: { full_name: string; email?: string; phone?: string }
 ): Promise<Customer> {
+  // Deduplicate on (tenant_id, phone) — schema enforces uniqueness and would
+  // otherwise throw an opaque 23505 that surfaces as a confusing chat error.
+  if (data.phone) {
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("phone", data.phone)
+      .maybeSingle();
+    if (existing) return existing as Customer;
+  }
+
   const { data: created, error } = await supabase
     .from("customers")
     .insert({
       tenant_id: tenantId,
       full_name: data.full_name,
       email: data.email ?? null,
+      phone: data.phone ?? null,
       source: "web",
       status: "lead",
     })

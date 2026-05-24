@@ -115,11 +115,20 @@ const baseStaff: Staff = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Returns a Monday far enough in the future to pass min_notice_hours + max_advance_days.
- *  2026-04-06 is a Monday (day 1). */
-const MONDAY = "2026-04-06";
-/** 2026-04-05 is a Sunday (day 0). */
-const SUNDAY = "2026-04-05";
+/** Pick a future weekday so tests stay valid as the clock advances.
+ *  Targets 7+ days out so we're inside max_advance_days but past min_notice_hours. */
+function nextWeekdayDate(targetDow: number, daysOutMin = 7): string {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  const today = d.getUTCDay();
+  let delta = (targetDow - today + 7) % 7;
+  if (delta < daysOutMin) delta += 7 * Math.ceil((daysOutMin - delta) / 7);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+const MONDAY = nextWeekdayDate(1); // next Monday at least a week out
+const SUNDAY = nextWeekdayDate(0); // next Sunday at least a week out
+const SATURDAY_NEXT = nextWeekdayDate(6); // next Saturday at least a week out
 
 function makeBooking(overrides: Partial<Booking> = {}): Booking {
   return {
@@ -319,10 +328,9 @@ describe("mockCalendarProvider.getAvailableSlots", () => {
       available_days: [1],
     };
     mockGetServiceById.mockResolvedValue(saturdayService);
-    // Saturday 2026-03-28
     const slots = await mockCalendarProvider.getAvailableSlots(
       TENANT_ID,
-      "2026-03-28",
+      SATURDAY_NEXT,
       SERVICE_ID
     );
     expect(slots).toEqual([]);

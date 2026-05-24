@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import { ConsentBanner } from "@/components/legal/consent-banner";
+import { LegalFooter } from "@/components/legal/legal-footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,11 +16,36 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MiNegocio Digital",
-  description: "AI-powered booking assistant for your business",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://minegocio.digital",
+  ),
+  title: {
+    default: "MiNegocio Digital",
+    template: "%s · MiNegocio",
+  },
+  description:
+    "Asistente de reservas con IA para tu negocio. Atiende a tus clientes 24/7 de forma automática.",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/mascot.png",
+    apple: "/mascot.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_MX",
+    siteName: "MiNegocio Digital",
+    title: "MiNegocio Digital",
+    description:
+      "Asistente de reservas con IA para negocios mexicanos. Atiende a tus clientes 24/7.",
+    images: ["/mascot.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: "MiNegocio Digital",
+    description: "Asistente de reservas con IA para tu negocio.",
+    images: ["/mascot.png"],
+  },
+  alternates: {
+    canonical: "/",
   },
 };
 
@@ -29,11 +56,13 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
+        <LegalFooter />
+        <ConsentBanner />
       </body>
     </html>
   );

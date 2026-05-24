@@ -39,7 +39,7 @@ describe("createLookupCustomerTool", () => {
     mockGetCustomerBySession.mockResolvedValue(mockCustomer);
 
     const tool = createLookupCustomerTool("tenant-1", "session-abc");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { session_id: "session-abc" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );
@@ -64,7 +64,7 @@ describe("createLookupCustomerTool", () => {
     mockGetCustomerBySession.mockResolvedValue(null);
 
     const tool = createLookupCustomerTool("tenant-1", "session-xyz");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { session_id: "session-xyz" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );
@@ -76,7 +76,7 @@ describe("createLookupCustomerTool", () => {
     mockGetCustomerBySession.mockResolvedValue(null);
 
     const tool = createLookupCustomerTool("tenant-1", "nonexistent-session");
-    const result = await tool.execute(
+    const result = await tool.execute!(
       { session_id: "nonexistent-session" },
       { messages: [], toolCallId: "call-1", abortSignal: new AbortController().signal }
     );

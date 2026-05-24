@@ -1,4 +1,58 @@
+import "server-only";
+
 import { supabase } from "@/lib/db/client";
+
+// ---------------------------------------------------------------------------
+// Session ↔ tenant binding (Phase 4.5 BLOCKER #1)
+// ---------------------------------------------------------------------------
+
+/** Persist that this onboarding session owns this tenant. Idempotent. */
+export async function bindSessionTenantId(
+  sessionId: string,
+  tenantId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("onboarding_sessions")
+    .upsert(
+      { session_id: sessionId, tenant_id: tenantId, last_seen_at: new Date().toISOString() },
+      { onConflict: "session_id" },
+    );
+  if (error) throw error;
+}
+
+/** Resolve the tenant id this session created during onboarding. */
+export async function getSessionTenantId(
+  sessionId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("onboarding_sessions")
+    .select("tenant_id")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.tenant_id as string | undefined) ?? null;
+}
+
+/** Record an AI escalation in a sealed table instead of stdout. */
+export async function recordEscalation(data: {
+  tenantId: string;
+  sessionId?: string | null;
+  reason: string;
+  summary: string;
+}): Promise<{ id: string }> {
+  const { data: created, error } = await supabase
+    .from("escalations")
+    .insert({
+      tenant_id: data.tenantId,
+      session_id: data.sessionId ?? null,
+      reason: data.reason,
+      summary: data.summary,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return created as { id: string };
+}
 
 // Generate a URL-safe slug from a business name
 function generateSlug(name: string): string {

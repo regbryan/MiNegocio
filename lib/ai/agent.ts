@@ -20,7 +20,7 @@ export async function createChatAgent(tenantId: string, sessionId: string) {
       list_services: createListServicesTool(tenantId),
       check_availability: createCheckAvailabilityTool(tenantId),
       create_booking: createCreateBookingTool(tenantId),
-      escalate_to_human: createEscalateToHumanTool(tenantId),
+      escalate_to_human: createEscalateToHumanTool(tenantId, sessionId),
     },
     stopWhen: stepCountIs(8),
   });
