@@ -50,31 +50,33 @@ export function LandingHero({ bookingsCount }: { bookingsCount: number }) {
           <div className="flex flex-col">
             <PresenceBadge bookingsCount={bookingsCount} />
 
-            <div className="mt-7 flex items-start gap-5">
+            <div className="mt-8 flex items-start gap-5 md:gap-6">
               <img
                 src="/mascot.png"
                 alt=""
                 aria-hidden="true"
-                className="-mt-3 hidden h-32 w-auto select-none md:block"
+                className={cn(
+                  // Visible at all widths. Mascot is the brand mark; hiding
+                  // it on mobile was wrong. Scales with viewport.
+                  "-mt-3 h-32 w-auto shrink-0 select-none",
+                  "md:-mt-4 md:h-48",
+                  "lg:-mt-6 lg:h-60",
+                  "xl:h-64",
+                )}
                 draggable={false}
               />
               <h1
                 id="hero-title"
                 className={cn(
-                  "max-w-[18ch] text-[44px] leading-[1.02] font-semibold tracking-[-0.04em] text-white",
-                  "md:text-[64px] md:leading-[1.00]",
+                  "max-w-[14ch] text-[40px] leading-[1.04] font-semibold tracking-[-0.035em] text-white",
+                  "md:text-[60px] md:leading-[1.00] md:max-w-[16ch]",
+                  "lg:text-[68px]",
                   "xl:text-[76px]",
                 )}
               >
                 <span className="block">Tu asistente.</span>
-                <span className="block text-white/85">En WhatsApp.</span>
-                <span className="block">
-                  Trabajando{" "}
-                  <span className="bg-[linear-gradient(180deg,#ffffff_0%,#cfeae0_100%)] bg-clip-text text-transparent">
-                    ahora mismo
-                  </span>
-                  .
-                </span>
+                <span className="block text-white/80">En WhatsApp.</span>
+                <span className="block">Trabajando ahora mismo.</span>
               </h1>
             </div>
 
@@ -182,19 +184,20 @@ function PresenceBadge({ bookingsCount }: { bookingsCount: number }) {
 
 function DemoMetaLine() {
   return (
-    <div className="mt-10 flex flex-wrap items-baseline gap-x-6 gap-y-2 font-mono text-[11px] tracking-[0.02em] text-white/35">
-      <span>
-        número de prueba ·{" "}
-        <span className="text-white/55">{WHATSAPP_SANDBOX_NUMBER}</span>
-      </span>
-      <span aria-hidden="true" className="text-white/15">
-        ·
-      </span>
-      <span>
-        responde el agente que ves aquí{" "}
-        <span className="text-white/55">↗</span>
-      </span>
-    </div>
+    <dl className="mt-10 grid grid-cols-1 gap-x-10 gap-y-3 font-mono text-[11px] tracking-[0.02em] text-white/40 sm:grid-cols-2">
+      <div className="flex flex-col gap-1">
+        <dt className="uppercase tracking-[0.12em] text-white/30">
+          Número de prueba
+        </dt>
+        <dd className="text-white/65">{WHATSAPP_SANDBOX_NUMBER}</dd>
+      </div>
+      <div className="flex flex-col gap-1">
+        <dt className="uppercase tracking-[0.12em] text-white/30">
+          Quien responde
+        </dt>
+        <dd className="text-white/65">El agente que ves aquí mismo</dd>
+      </div>
+    </dl>
   );
 }
 
