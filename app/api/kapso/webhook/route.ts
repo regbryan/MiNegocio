@@ -84,57 +84,67 @@ export async function POST(req: NextRequest) {
     return new Response("Bad Request", { status: 400 });
   }
 
-  // Non-inbound events (delivered/read/failed) — log and ack. Kapso retries
-  // if we return a non-2xx so we always 200 unless the request is malformed.
-  const eventType =
-    payload.event_type ?? payload.event ?? payload.type ?? "";
+  // Top-level event type. Kapso uses `type` (verified from real payload).
+  const eventType = payload.type ?? "";
   if (eventType !== INBOUND_EVENT) {
     logger.info("kapso.event_ignored", { event_type: eventType });
     return new Response(null, { status: 204 });
   }
 
-  const msg = payload.message;
-  const body = msg?.text?.body?.trim() ?? "";
-  const fromRaw = msg?.from ?? "";
-  if (!fromRaw || !body) {
-    // Diagnostic: log the actual shape so we can fix field-name guesses
-    // when Kapso's payload doesn't match what we expected.
-    logger.info("kapso.empty_message", {
-      event_type: eventType,
-      payload_keys: Object.keys(payload as object),
-      message_keys: msg ? Object.keys(msg as object) : null,
-      raw_preview: rawBody.slice(0, 800),
-    });
+  // Kapso batches events: payload.data is an array of message events.
+  // Even when only 1 message arrives, it's wrapped in an array.
+  const events = Array.isArray(payload.data) ? payload.data : [];
+  if (events.length === 0) {
+    logger.info("kapso.empty_batch", { event_type: eventType });
     return new Response(null, { status: 204 });
   }
 
-  // Normalize phone — Kapso sends digits (e.g. "19175551234"), but to keep
-  // session_id format stable across both Twilio and Kapso we re-prefix with
-  // "+" so the session key remains "wa:+1...".
-  const phone = fromRaw.startsWith("+") ? fromRaw : `+${fromRaw}`;
-  const sessionId = `wa:${phone}`;
-
-  logger.info("kapso.incoming", {
-    from_hash: hashPhone(phone),
-    message_id: msg?.id,
-    is_new_conversation: payload.is_new_conversation ?? null,
+  logger.info("kapso.batch_received", {
+    event_count: events.length,
+    batch_size: payload.batch_info?.size ?? events.length,
   });
 
-  // Hand off heavy work to the background so we ack Kapso in <100ms.
-  waitUntil(
-    processAgentTurn({
-      from: phone,
-      phone,
-      body,
-      sessionId,
-      messageId: msg?.id ?? "",
-    }).catch((err) => {
-      logger.error("kapso.background_failed", {
-        from_hash: hashPhone(phone),
-        message: (err as Error)?.message,
+  // Process each event in the batch. We dispatch each into its own
+  // waitUntil so an error on one doesn't block the others.
+  for (const evt of events) {
+    const msg = evt?.message;
+    const body = msg?.text?.body?.trim() ?? "";
+    const fromRaw = msg?.from ?? "";
+    const messageId = msg?.id ?? "";
+    if (!fromRaw || !body) {
+      logger.info("kapso.event_skipped", {
+        reason: !fromRaw ? "no_from" : "no_body",
+        message_id: messageId,
       });
-    }),
-  );
+      continue;
+    }
+
+    // Kapso sends digits without "+" (e.g. "19175656335"). Re-prefix so
+    // session_id stays consistent with our prior format ("wa:+1...").
+    const phone = fromRaw.startsWith("+") ? fromRaw : `+${fromRaw}`;
+    const sessionId = `wa:${phone}`;
+
+    logger.info("kapso.incoming", {
+      from_hash: hashPhone(phone),
+      message_id: messageId,
+      is_new_conversation: evt?.is_new_conversation ?? null,
+    });
+
+    waitUntil(
+      processAgentTurn({
+        from: phone,
+        phone,
+        body,
+        sessionId,
+        messageId,
+      }).catch((err) => {
+        logger.error("kapso.background_failed", {
+          from_hash: hashPhone(phone),
+          message: (err as Error)?.message,
+        });
+      }),
+    );
+  }
 
   return new Response(null, { status: 200 });
 }
@@ -296,27 +306,50 @@ function fallbackReply(): string {
 // Types — Kapso webhook payload (best-effort; see docs.kapso.ai for full spec)
 // ---------------------------------------------------------------------------
 
+// Verified from a real Kapso webhook capture (see kapso_debug_payloads).
+// The envelope is { type, batch, data[], batch_info }. The actual message
+// content lives at payload.data[i].message — Kapso batches events even when
+// only one arrives.
 type KapsoWebhookPayload = {
-  // Kapso's docs reference "event_type" in some places and "event"/"type" in
-  // others; we accept any of the three.
-  event_type?: string;
-  event?: string;
   type?: string;
-  is_new_conversation?: boolean;
-  phone_number_id?: string;
+  batch?: boolean;
+  data?: KapsoEvent[];
+  batch_info?: {
+    size?: number;
+    window_ms?: number;
+    first_sequence?: number;
+    last_sequence?: number;
+    conversation_id?: string;
+  };
+};
+
+type KapsoEvent = {
   message?: {
     id?: string;
-    timestamp?: number;
+    timestamp?: string;
     type?: string;
-    from?: string;
-    from_user_id?: string;
-    username?: string;
+    from?: string | null;
+    from_user_id?: string | null;
+    from_parent_user_id?: string | null;
+    username?: string | null;
     text?: { body?: string };
+    kapso?: {
+      direction?: "inbound" | "outbound";
+      status?: string;
+      processing_status?: string;
+      has_media?: boolean;
+      origin?: string;
+      content?: string;
+    };
   };
   conversation?: {
     id?: string;
     phone_number?: string;
+    contact_name?: string;
+    phone_number_id?: string;
   };
+  is_new_conversation?: boolean;
+  phone_number_id?: string;
 };
 
 export async function GET() {
