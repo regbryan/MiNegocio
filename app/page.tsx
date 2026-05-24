@@ -32,10 +32,10 @@ export default async function HomePage() {
   ]);
 
   return (
-    <main id="main" className="flex-1 bg-[#0a0a0a] text-white">
+    <main id="main" className="flex-1 bg-[#f5ebd8] text-[#2a1f15]">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:text-black"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[#2a1f15] focus:px-3 focus:py-2 focus:text-sm focus:text-[#fff8ed]"
       >
         Saltar al contenido
       </a>
