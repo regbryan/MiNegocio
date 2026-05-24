@@ -17,8 +17,16 @@ export async function createChatAgent(
 ) {
   const systemPrompt = await buildSystemPrompt(tenantId);
 
+  // Haiku is ~3x faster than Sonnet. For the WhatsApp portfolio demo we
+  // need to fit the entire tool loop within Twilio's 15s webhook timeout,
+  // which Sonnet 4 was busting (~25s end-to-end). Booking flows don't need
+  // Sonnet's reasoning depth. Override per-tenant in a future migration if
+  // a more complex flow needs the upgrade.
+  const modelId =
+    process.env.AGENT_MODEL_OVERRIDE ?? "claude-haiku-4-5-20251001";
+
   return new ToolLoopAgent({
-    model: anthropic("claude-sonnet-4-20250514"),
+    model: anthropic(modelId),
     instructions: systemPrompt,
     tools: {
       lookup_customer: createLookupCustomerTool(tenantId, sessionId),
