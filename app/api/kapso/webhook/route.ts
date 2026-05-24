@@ -73,7 +73,14 @@ export async function POST(req: NextRequest) {
   const body = msg?.text?.body?.trim() ?? "";
   const fromRaw = msg?.from ?? "";
   if (!fromRaw || !body) {
-    logger.info("kapso.empty_message", { event_type: eventType });
+    // Diagnostic: log the actual shape so we can fix field-name guesses
+    // when Kapso's payload doesn't match what we expected.
+    logger.info("kapso.empty_message", {
+      event_type: eventType,
+      payload_keys: Object.keys(payload as object),
+      message_keys: msg ? Object.keys(msg as object) : null,
+      raw_preview: rawBody.slice(0, 800),
+    });
     return new Response(null, { status: 204 });
   }
 
