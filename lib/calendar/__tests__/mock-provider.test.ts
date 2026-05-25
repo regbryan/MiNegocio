@@ -82,6 +82,7 @@ const baseTenant: Tenant = {
   tax_included: true,
   extra_fee_notes: null,
   first_visit_instructions: null,
+  timezone: "America/Mexico_City",
   created_at: "2024-01-01T00:00:00Z",
 };
 

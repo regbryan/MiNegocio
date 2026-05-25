@@ -60,6 +60,12 @@ export interface Tenant {
   tax_included: boolean;
   extra_fee_notes: string | null;
   first_visit_instructions: string | null;
+  /**
+   * IANA timezone for this tenant. Used by create_booking to interpret
+   * naive ISO timestamps emitted by the agent. Defaults to
+   * 'America/Mexico_City' for LATAM tenants.
+   */
+  timezone: string;
   created_at: string;
 }
 
