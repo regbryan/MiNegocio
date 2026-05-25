@@ -8,6 +8,21 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ tenantSlug: string }>;
+}): Promise<Metadata> {
+  const { tenantSlug } = await params;
+  const tenant = await getTenantBySlug(tenantSlug);
+  if (!tenant) return { robots: { index: false, follow: false } };
+  return {
+    title: `Chat · ${tenant.business_name}`,
+    description: `Habla con el asistente de ${tenant.business_name} para reservar, preguntar horarios o ver servicios.`,
+    robots: { index: false, follow: false },
+  };
+}
+
 export default async function ChatPage({
   params,
 }: {
@@ -28,7 +43,7 @@ export default async function ChatPage({
       className="flex flex-1 flex-col"
     >
       <h1 className="sr-only">{tenant.business_name}</h1>
-      <div className="mx-auto w-full max-w-3xl px-4 pt-3">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-2 pb-1">
         <AiDisclosure tenantName={tenant.business_name} />
       </div>
       <ChatInterface
