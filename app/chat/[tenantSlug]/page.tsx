@@ -4,10 +4,9 @@ import { notFound } from "next/navigation";
 import { AiDisclosure } from "@/components/legal/ai-disclosure";
 import { ChatInterface } from "./_components/chat-interface";
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
-
+// Per-tenant metadata. Next.js doesn't allow `metadata` and
+// `generateMetadata` to coexist in the same file, so this owns both
+// the title (which the static const couldn't do) and the noindex flag.
 export async function generateMetadata({
   params,
 }: {
