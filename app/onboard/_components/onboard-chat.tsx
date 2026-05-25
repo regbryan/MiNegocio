@@ -81,33 +81,39 @@ function OnboardHeader() {
 }
 
 const SUGGESTIONS = [
-  "Hola, quiero registrar mi negocio",
   "Tengo un salón de belleza",
   "Tengo un restaurante",
+  "Tengo un consultorio dental",
+  "Tengo otro tipo de negocio",
 ];
 
 function OnboardEmptyState() {
   return (
     <div className="flex h-full items-center justify-center px-6">
-      <div className="max-w-md space-y-6 text-center">
-        <div className="mx-auto h-24 w-24 overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10">
+      <div className="max-w-md space-y-7 text-center">
+        <div className="mx-auto h-28 w-28 overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10">
           <img
             src="/mascot.png"
             alt=""
             aria-hidden="true"
-            className="-mb-1.5 h-[112px] w-auto"
+            className="-mb-2 h-[128px] w-auto"
           />
         </div>
-        <div className="space-y-2">
-          <p className="text-lg font-semibold tracking-[-0.01em] text-white">
-            Configura tu asistente de IA
+        <div className="space-y-2.5">
+          <p className="text-[20px] font-semibold leading-tight tracking-[-0.015em] text-white">
+            Configuremos tu asistente.
           </p>
-          <p className="text-sm leading-relaxed text-white/65">
-            Te guiaré paso a paso para registrar tu negocio en unos minutos.
-            Una pregunta a la vez.
+          <p className="text-[14px] leading-[1.55] text-white/65">
+            Te haré algunas preguntas sobre tu negocio — servicios, horarios,
+            personal. Toma unos 5 minutos. Una pregunta a la vez para que sea
+            fácil.
           </p>
         </div>
         <SuggestionChips />
+        <p className="pt-2 text-[11px] leading-tight text-white/35">
+          Cuéntame qué tipo de negocio tienes para empezar, o escribe en tus
+          propias palabras abajo.
+        </p>
       </div>
     </div>
   );
