@@ -2,7 +2,6 @@
 
 import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "minegocio.consent.v1";
 
@@ -19,16 +18,24 @@ function readConsent(): string | null {
   }
 }
 
+/**
+ * Compact privacy notice. MiNegocio uses only strictly-necessary cookies
+ * (session storage, no tracking), which under GDPR/LFPDPPP doesn't require
+ * affirmative consent — a notice + dismiss is sufficient. So instead of a
+ * full-width modal banner blocking the page, this renders as a small
+ * bottom-right toast with a single "Entendido" dismiss and a link to the
+ * full privacy notice.
+ */
 export function ConsentBanner() {
   const stored = useSyncExternalStore(subscribe, readConsent, () => null);
   const [dismissed, setDismissed] = useState(false);
   const visible = !dismissed && stored === null;
 
-  function record(value: "accepted" | "essential_only") {
+  function record() {
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ value, at: new Date().toISOString() }),
+        JSON.stringify({ value: "acknowledged", at: new Date().toISOString() }),
       );
     } catch {
       // Storage may be blocked; banner just hides for this session.
@@ -41,29 +48,28 @@ export function ConsentBanner() {
   return (
     <div
       role="region"
-      aria-label="Aviso de privacidad y consentimiento"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-lg border border-border/40 bg-background/95 p-4 shadow-lg backdrop-blur"
+      aria-label="Aviso de privacidad"
+      className="fixed bottom-3 left-3 right-3 z-50 sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-sm"
     >
-      <p className="text-sm leading-6">
-        Usamos cookies estrictamente necesarias para operar MiNegocio. No
-        usamos cookies de marketing ni rastreo de terceros. Al continuar,
-        usted reconoce nuestro{" "}
-        <Link href="/legal/privacidad" className="underline">
-          Aviso de Privacidad
-        </Link>{" "}
-        y los{" "}
-        <Link href="/legal/terminos" className="underline">
-          Términos
-        </Link>
-        .
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => record("accepted")}>
-          Aceptar
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => record("essential_only")}>
-          Solo lo esencial
-        </Button>
+      <div className="flex items-start gap-3 rounded-xl border border-black/10 bg-white/95 px-4 py-3 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md dark:border-white/10 dark:bg-neutral-900/95">
+        <p className="flex-1 text-[12.5px] leading-[1.5] text-neutral-700 dark:text-neutral-300">
+          Solo cookies necesarias. Sin tracking.{" "}
+          <Link
+            href="/legal/privacidad"
+            className="underline decoration-neutral-400 underline-offset-2 hover:text-neutral-900 dark:hover:text-white"
+          >
+            Aviso
+          </Link>
+          .
+        </p>
+        <button
+          type="button"
+          onClick={record}
+          className="shrink-0 rounded-md bg-neutral-900 px-2.5 py-1 text-[12px] font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+          aria-label="Cerrar aviso"
+        >
+          OK
+        </button>
       </div>
     </div>
   );
