@@ -3,7 +3,6 @@ import crypto from "node:crypto";
 import { waitUntil } from "@vercel/functions";
 
 import { createChatAgent } from "@/lib/ai/agent";
-import { supabase } from "@/lib/db/client";
 import {
   getConversation,
   getTenantBySlug,
@@ -12,11 +11,9 @@ import {
 import { sendWhatsAppMessage } from "@/lib/kapso/send-message";
 import { logger } from "@/lib/logger";
 
-// Kapso's WhatsApp webhook handler. Mirrors the Twilio webhook we already
-// have (app/api/whatsapp/webhook/route.ts) but speaks Kapso's payload and
-// signature format. Both routes can coexist during migration — point the
-// Kapso dashboard at /api/kapso/webhook, leave the Twilio sandbox webhook
-// alone, and we can decommission Twilio once Kapso is verified green.
+// Kapso's WhatsApp webhook handler. Verifies signature, parses Kapso's batch
+// envelope, dispatches each event through the same agent/booking/email
+// pipeline used by the web chat.
 //
 // Required env vars:
 //   KAPSO_API_KEY                  — outbound auth (used by send-message.ts)
@@ -46,29 +43,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     logger.warn("kapso.bad_body", { message: (err as Error)?.message });
     return new Response("Bad Request", { status: 400 });
-  }
-
-  // Debug-only payload dump to Supabase — lets us read the actual Kapso
-  // webhook payload shape via SQL since Vercel log search truncates message
-  // bodies. Inserts every request so we can also see signature-rejected
-  // ones if needed. Remove once Kapso integration is verified end-to-end.
-  const debugHeaders: Record<string, string> = {};
-  req.headers.forEach((v, k) => {
-    if (
-      k.startsWith("x-") ||
-      k === "content-type" ||
-      k === "user-agent"
-    ) {
-      debugHeaders[k] = v;
-    }
-  });
-  try {
-    await supabase.from("kapso_debug_payloads").insert({
-      raw_body: rawBody.slice(0, 8000),
-      headers: debugHeaders,
-    });
-  } catch {
-    // Best-effort — don't fail the webhook on a debug insert.
   }
 
   if (!isSignatureValid(req, rawBody)) {
